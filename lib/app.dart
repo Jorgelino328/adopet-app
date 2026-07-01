@@ -1,12 +1,38 @@
 import 'package:flutter/material.dart';
 
+import 'core/services/auth_service.dart';
 import 'core/theme/app_theme.dart';
 import 'features/adoption/presentation/pages/adoption_form_page.dart';
 import 'features/home/presentation/pages/home_page.dart';
 import 'features/products/presentation/pages/products_page.dart';
+import 'features/profile/presentation/pages/profile_page.dart';
 
-class PetShopApp extends StatelessWidget {
+class PetShopApp extends StatefulWidget {
   const PetShopApp({super.key});
+
+  @override
+  State<PetShopApp> createState() => _PetShopAppState();
+}
+
+class _PetShopAppState extends State<PetShopApp> {
+  final _authService = AuthService.instance;
+  bool _isReady = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initialize();
+  }
+
+  Future<void> _initialize() async {
+    await _authService.initialize();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _isReady = true;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -14,7 +40,9 @@ class PetShopApp extends StatelessWidget {
       title: 'Pet Shop',
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(),
-      home: const PetShopShell(),
+      home: _isReady
+          ? const PetShopShell()
+          : const Scaffold(body: Center(child: CircularProgressIndicator())),
     );
   }
 }
@@ -28,11 +56,11 @@ class PetShopShell extends StatefulWidget {
 
 class _PetShopShellState extends State<PetShopShell> {
   int _currentIndex = 0;
-
   final List<Widget> _pages = const [
     HomePage(),
     ProductsPage(),
     AdoptionFormPage(),
+    ProfilePage(),
   ];
 
   @override
@@ -63,6 +91,11 @@ class _PetShopShellState extends State<PetShopShell> {
             icon: Icon(Icons.favorite_border),
             selectedIcon: Icon(Icons.favorite),
             label: 'Adoção',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
+            label: 'Perfil',
           ),
         ],
       ),

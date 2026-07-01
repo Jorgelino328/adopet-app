@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/services/auth_service.dart';
 import '../../../../core/services/persistence_service.dart';
 import '../../../products/data/pet_service.dart';
 
@@ -25,6 +26,11 @@ class _AdoptionFormPageState extends State<AdoptionFormPage> {
   @override
   void initState() {
     super.initState();
+    final currentUser = AuthService.instance.currentUser;
+    if (currentUser != null) {
+      _nameController.text = currentUser.name;
+      _emailController.text = currentUser.email;
+    }
     if (widget.selectedPet != null) {
       _petPreference = widget.selectedPet!.name;
     }
@@ -101,9 +107,12 @@ class _AdoptionFormPageState extends State<AdoptionFormPage> {
                 keyboardType: TextInputType.emailAddress,
                 decoration: const InputDecoration(labelText: 'E-mail'),
                 validator: (value) {
-                  if (value == null || value.trim().isEmpty)
+                  if (value == null || value.trim().isEmpty) {
                     return 'Informe seu e-mail';
-                  if (!value.contains('@')) return 'E-mail inválido';
+                  }
+                  if (!value.contains('@')) {
+                    return 'E-mail inválido';
+                  }
                   return null;
                 },
               ),
@@ -113,17 +122,19 @@ class _AdoptionFormPageState extends State<AdoptionFormPage> {
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(labelText: 'Idade'),
                 validator: (value) {
-                  if (value == null || value.trim().isEmpty)
+                  if (value == null || value.trim().isEmpty) {
                     return 'Informe sua idade';
+                  }
                   final age = int.tryParse(value);
-                  if (age == null || age < 18)
+                  if (age == null || age < 18) {
                     return 'A adoção precisa ser autorizada por um maior de 18 anos';
+                  }
                   return null;
                 },
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                value: _petPreference,
+                initialValue: _petPreference,
                 decoration: const InputDecoration(
                   labelText: 'Pet de interesse',
                 ),
@@ -144,10 +155,12 @@ class _AdoptionFormPageState extends State<AdoptionFormPage> {
                 decoration: const InputDecoration(
                   labelText: 'Conte um pouco sobre seu dia a dia',
                 ),
-                validator: (value) =>
-                    (value == null || value.trim().length < 10)
-                    ? 'Descreva pelo menos 10 caracteres'
-                    : null,
+                validator: (value) {
+                  if (value == null || value.trim().length < 10) {
+                    return 'Descreva pelo menos 10 caracteres';
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 24),
               SizedBox(
