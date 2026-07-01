@@ -16,9 +16,9 @@ class _AuthPageState extends State<AuthPage> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _preferencesController = TextEditingController();
-  final _existingPetsController = TextEditingController();
   final _authService = AuthService.instance;
+  final Set<String> _selectedWantedPets = <String>{};
+  final Set<String> _selectedHavePets = <String>{};
 
   bool _isSignUp = true;
   bool _isSubmitting = false;
@@ -29,8 +29,6 @@ class _AuthPageState extends State<AuthPage> {
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
-    _preferencesController.dispose();
-    _existingPetsController.dispose();
     super.dispose();
   }
 
@@ -49,13 +47,18 @@ class _AuthPageState extends State<AuthPage> {
             name: _nameController.text,
             email: _emailController.text,
             password: _passwordController.text,
-            preferences: _preferencesController.text,
-            existingPets: _existingPetsController.text,
+            preferences: UserProfile.serializePreferenceSelections(
+              _selectedWantedPets.toList(),
+            ),
+            existingPets: UserProfile.serializePreferenceSelections(
+              _selectedHavePets.toList(),
+            ),
           )
         : await _authService.signIn(
-            email: _emailController.text,
-            password: _passwordController.text,
-          ) != null;
+                email: _emailController.text,
+                password: _passwordController.text,
+              ) !=
+              null;
 
     if (!mounted) {
       return;
@@ -91,7 +94,8 @@ class _AuthPageState extends State<AuthPage> {
                   children: [
                     Text(
                       _isSignUp ? 'Criar conta' : 'Entrar',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.bold),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 12),
@@ -106,7 +110,10 @@ class _AuthPageState extends State<AuthPage> {
                       TextFormField(
                         controller: _nameController,
                         decoration: const InputDecoration(labelText: 'Nome'),
-                        validator: (value) => value == null || value.trim().isEmpty ? 'Informe seu nome' : null,
+                        validator: (value) =>
+                            value == null || value.trim().isEmpty
+                            ? 'Informe seu nome'
+                            : null,
                       ),
                     if (_isSignUp) const SizedBox(height: 12),
                     TextFormField(
@@ -114,8 +121,12 @@ class _AuthPageState extends State<AuthPage> {
                       keyboardType: TextInputType.emailAddress,
                       decoration: const InputDecoration(labelText: 'E-mail'),
                       validator: (value) {
-                        if (value == null || value.trim().isEmpty) return 'Informe seu e-mail';
-                        if (!value.contains('@')) return 'E-mail inválido';
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Informe seu e-mail';
+                        }
+                        if (!value.contains('@')) {
+                          return 'E-mail inválido';
+                        }
                         return null;
                       },
                     ),
@@ -124,37 +135,95 @@ class _AuthPageState extends State<AuthPage> {
                       controller: _passwordController,
                       obscureText: true,
                       decoration: const InputDecoration(labelText: 'Senha'),
-                      validator: (value) => value == null || value.length < 6 ? 'Use pelo menos 6 caracteres' : null,
+                      validator: (value) => value == null || value.length < 6
+                          ? 'Use pelo menos 6 caracteres'
+                          : null,
                     ),
                     const SizedBox(height: 12),
-                    if (_isSignUp)
-                      TextFormField(
-                        controller: _preferencesController,
-                        decoration: const InputDecoration(labelText: 'Preferências (ex.: gatos, filhotes)'),
-                        maxLines: 2,
+                    if (_isSignUp) ...[
+                      Text(
+                        'Que tipo de pet você quer?',
+                        style: Theme.of(context).textTheme.titleMedium,
                       ),
-                    if (_isSignUp) const SizedBox(height: 12),
-                    if (_isSignUp)
-                      TextFormField(
-                        controller: _existingPetsController,
-                        decoration: const InputDecoration(labelText: 'Pets que você já tem (opcional)'),
-                        maxLines: 2,
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: UserProfile.petPreferenceOptions.map((
+                          option,
+                        ) {
+                          final isSelected = _selectedWantedPets.contains(
+                            option,
+                          );
+                          return FilterChip(
+                            label: Text(UserProfile.labelForPreference(option)),
+                            selected: isSelected,
+                            onSelected: (selected) {
+                              setState(() {
+                                if (selected) {
+                                  _selectedWantedPets.add(option);
+                                } else {
+                                  _selectedWantedPets.remove(option);
+                                }
+                              });
+                            },
+                          );
+                        }).toList(),
                       ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Que tipo de pet você tem?',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: UserProfile.petPreferenceOptions.map((
+                          option,
+                        ) {
+                          final isSelected = _selectedHavePets.contains(option);
+                          return FilterChip(
+                            label: Text(UserProfile.labelForPreference(option)),
+                            selected: isSelected,
+                            onSelected: (selected) {
+                              setState(() {
+                                if (selected) {
+                                  _selectedHavePets.add(option);
+                                } else {
+                                  _selectedHavePets.remove(option);
+                                }
+                              });
+                            },
+                          );
+                        }).toList(),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
                     if (_errorMessage != null) ...[
                       const SizedBox(height: 12),
-                      Text(_errorMessage!, style: const TextStyle(color: Colors.redAccent)),
+                      Text(
+                        _errorMessage!,
+                        style: const TextStyle(color: Colors.redAccent),
+                      ),
                     ],
                     const SizedBox(height: 20),
                     FilledButton(
                       onPressed: _isSubmitting ? null : _submit,
                       child: _isSubmitting
-                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
                           : Text(_isSignUp ? 'Criar conta' : 'Entrar'),
                     ),
                     const SizedBox(height: 12),
                     TextButton(
                       onPressed: () => setState(() => _isSignUp = !_isSignUp),
-                      child: Text(_isSignUp ? 'Já tenho conta' : 'Criar uma conta'),
+                      child: Text(
+                        _isSignUp ? 'Já tenho conta' : 'Criar uma conta',
+                      ),
                     ),
                   ],
                 ),

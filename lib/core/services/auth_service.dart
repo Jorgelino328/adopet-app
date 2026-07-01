@@ -17,6 +17,8 @@ class UserProfile {
     required this.createdAt,
   });
 
+  static const petPreferenceOptions = ['dog', 'cat', 'bird', 'other'];
+
   final String id;
   final String name;
   final String email;
@@ -47,6 +49,35 @@ class UserProfile {
       'existingPets': existingPets,
       'createdAt': createdAt.toIso8601String(),
     };
+  }
+
+  static List<String> parsePreferenceSelections(String preferences) {
+    return preferences
+        .split(',')
+        .map((value) => value.trim().toLowerCase())
+        .where((value) => value.isNotEmpty)
+        .toList();
+  }
+
+  static String serializePreferenceSelections(List<String> selections) {
+    return selections
+        .map((value) => value.trim().toLowerCase())
+        .where((value) => value.isNotEmpty)
+        .join(',');
+  }
+
+  static String labelForPreference(String value) {
+    switch (value.toLowerCase()) {
+      case 'dog':
+        return 'Cachorro';
+      case 'cat':
+        return 'Gato';
+      case 'bird':
+        return 'Pássaro';
+      case 'other':
+      default:
+        return 'Outro';
+    }
   }
 }
 
@@ -88,7 +119,9 @@ class AuthService {
     final prefs = await SharedPreferences.getInstance();
     final sessionJson = prefs.getString(_sessionKey);
     if (sessionJson != null && sessionJson.isNotEmpty) {
-      currentUser = UserProfile.fromJson(jsonDecode(sessionJson) as Map<String, dynamic>);
+      currentUser = UserProfile.fromJson(
+        jsonDecode(sessionJson) as Map<String, dynamic>,
+      );
     }
   }
 
@@ -125,7 +158,55 @@ class AuthService {
     return true;
   }
 
-  Future<UserProfile?> signIn({required String email, required String password}) async {
+  Future<bool> updateProfile({
+    required String name,
+    required String email,
+    required String preferences,
+    required String existingPets,
+  }) async {
+    if (currentUser == null) {
+      return false;
+    }
+
+    final normalizedEmail = email.trim().toLowerCase();
+    final conflictingUser = await _findUser(normalizedEmail);
+    if (conflictingUser != null && conflictingUser.id != currentUser!.id) {
+      return false;
+    }
+
+    final updatedUser = UserProfile(
+      id: currentUser!.id,
+      name: name.trim(),
+      email: normalizedEmail,
+      passwordHash: currentUser!.passwordHash,
+      preferences: preferences.trim(),
+      existingPets: existingPets.trim(),
+      createdAt: currentUser!.createdAt,
+    );
+
+    if (_db != null) {
+      await _db!.update(
+        'users',
+        updatedUser.toJson(),
+        where: 'id = ?',
+        whereArgs: [updatedUser.id],
+      );
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      'user_${updatedUser.email}',
+      jsonEncode(updatedUser.toJson()),
+    );
+    await _persistSession(updatedUser);
+    currentUser = updatedUser;
+    return true;
+  }
+
+  Future<UserProfile?> signIn({
+    required String email,
+    required String password,
+  }) async {
     final normalizedEmail = email.trim().toLowerCase();
     final parsedUser = await _findUser(normalizedEmail);
     if (parsedUser == null) {

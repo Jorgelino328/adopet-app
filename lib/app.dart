@@ -6,6 +6,7 @@ import 'features/adoption/presentation/pages/adoption_form_page.dart';
 import 'features/auth/presentation/pages/auth_page.dart';
 import 'features/home/presentation/pages/home_page.dart';
 import 'features/products/presentation/pages/products_page.dart';
+import 'features/profile/presentation/pages/profile_page.dart';
 
 class PetShopApp extends StatefulWidget {
   const PetShopApp({super.key});
@@ -43,14 +44,23 @@ class _PetShopAppState extends State<PetShopApp> {
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(),
       home: _isReady
-          ? (_isAuthenticated ? const PetShopShell() : AuthPage(onAuthenticated: () => setState(() => _isAuthenticated = true)))
+          ? (_isAuthenticated
+                ? PetShopShell(
+                    onSignedOut: () => setState(() => _isAuthenticated = false),
+                  )
+                : AuthPage(
+                    onAuthenticated: () =>
+                        setState(() => _isAuthenticated = true),
+                  ))
           : const Scaffold(body: Center(child: CircularProgressIndicator())),
     );
   }
 }
 
 class PetShopShell extends StatefulWidget {
-  const PetShopShell({super.key});
+  const PetShopShell({super.key, required this.onSignedOut});
+
+  final VoidCallback onSignedOut;
 
   @override
   State<PetShopShell> createState() => _PetShopShellState();
@@ -58,12 +68,18 @@ class PetShopShell extends StatefulWidget {
 
 class _PetShopShellState extends State<PetShopShell> {
   int _currentIndex = 0;
+  late final List<Widget> _pages;
 
-  final List<Widget> _pages = const [
-    HomePage(),
-    ProductsPage(),
-    AdoptionFormPage(),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _pages = [
+      const HomePage(),
+      const ProductsPage(),
+      const AdoptionFormPage(),
+      ProfilePage(onSignedOut: widget.onSignedOut),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -93,6 +109,11 @@ class _PetShopShellState extends State<PetShopShell> {
             icon: Icon(Icons.favorite_border),
             selectedIcon: Icon(Icons.favorite),
             label: 'Adoção',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
+            label: 'Perfil',
           ),
         ],
       ),

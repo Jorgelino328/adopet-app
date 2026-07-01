@@ -34,5 +34,30 @@ void main() {
       expect(user!.name, 'Ana');
       expect(user.preferences, contains('gatos'));
     });
+
+    test('updates the current user profile preferences', () async {
+      final auth = AuthService.instance;
+      await auth.initialize();
+      await auth.clearForTests();
+
+      await auth.signUp(
+        name: 'Ana',
+        email: 'ana@example.com',
+        password: 'supersecret',
+        preferences: 'dog',
+        existingPets: 'Nenhum',
+      );
+
+      final updated = await auth.updateProfile(
+        name: 'Ana',
+        email: 'ana@example.com',
+        preferences: 'dog,cat',
+        existingPets: 'Um gato',
+      );
+
+      expect(updated, isTrue);
+      expect(auth.currentUser?.preferences, 'dog,cat');
+      expect(auth.currentUser?.existingPets, 'Um gato');
+    });
   });
 }
