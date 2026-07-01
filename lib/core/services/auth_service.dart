@@ -14,6 +14,7 @@ class UserProfile {
     required this.passwordHash,
     required this.preferences,
     this.age,
+    this.favorites = '',
     required this.createdAt,
   });
 
@@ -24,32 +25,35 @@ class UserProfile {
   final String email;
   final String passwordHash;
   final String preferences;
-  final String? age;
+  final int? age;
+  final String favorites;
   final DateTime createdAt;
 
-  factory UserProfile.fromJson(Map<String, dynamic> json) {
-    return UserProfile(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      email: json['email'] as String,
-      passwordHash: json['passwordHash'] as String,
-      preferences: json['preferences'] as String,
-      age: json['age'] as String?,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-    );
-  }
+factory UserProfile.fromJson(Map<String, dynamic> json) {
+  return UserProfile(
+    id: json['id'] as String,
+    name: json['name'] as String,
+    email: json['email'] as String,
+    passwordHash: json['passwordHash'] as String,
+    preferences: json['preferences'] as String,
+    age: json['age'] is String ? int.tryParse(json['age']) : json['age'] as int?,
+    favorites: json['favorites'] as String? ?? '',
+    createdAt: DateTime.parse(json['createdAt'] as String),
+  );
+}
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'name': name,
-      'email': email,
-      'passwordHash': passwordHash,
-      'preferences': preferences,
-      'age': age,
-      'createdAt': createdAt.toIso8601String(),
-    };
-  }
+Map<String, dynamic> toJson() {
+  return {
+    'id': id,
+    'name': name,
+    'email': email,
+    'passwordHash': passwordHash,
+    'preferences': preferences,
+    'age': age,
+    'favorites': favorites,
+    'createdAt': createdAt.toIso8601String(),
+  };
+}
 
   static List<String> parsePreferenceSelections(String preferences) {
     return preferences
@@ -99,7 +103,7 @@ class AuthService {
       }
       _db = await openDatabase(
         'pet_shop.db',
-        version: 2,
+        version: 3,
         onCreate: (db, version) async {
           await db.execute('''
             CREATE TABLE users (
@@ -108,20 +112,16 @@ class AuthService {
               email TEXT NOT NULL UNIQUE,
               passwordHash TEXT NOT NULL,
               preferences TEXT NOT NULL,
-              age TEXT,
+              age INTEGER,
+              favorites TEXT NOT NULL DEFAULT '',
               createdAt TEXT NOT NULL
             )
           ''');
         },
         onUpgrade: (db, oldVersion, newVersion) async {
-          if (oldVersion < 2) {
-            final columns = await db.rawQuery('PRAGMA table_info(users)');
-            final hasAgeColumn = columns.any(
-              (column) => (column['name'] as String?) == 'age',
-            );
-            if (!hasAgeColumn) {
-              await db.execute('ALTER TABLE users ADD COLUMN age TEXT');
-            }
+          if (oldVersion < 3) {
+            await db.execute('ALTER TABLE users ADD COLUMN age INTEGER');
+            await db.execute('ALTER TABLE users ADD COLUMN favorites TEXT NOT NULL DEFAULT ""');
           }
         },
       );
@@ -141,7 +141,7 @@ class AuthService {
     required String email,
     required String password,
     required String preferences,
-    String? age,
+    int? age,
   }) async {
     final normalizedEmail = email.trim().toLowerCase();
     if (await _userExists(normalizedEmail)) {
@@ -154,7 +154,8 @@ class AuthService {
       email: normalizedEmail,
       passwordHash: _hashPassword(password),
       preferences: preferences.trim(),
-      age: age?.trim(),
+      age: age,
+      favorites: '',
       createdAt: DateTime.now(),
     );
 
@@ -173,11 +174,10 @@ class AuthService {
     required String name,
     required String email,
     required String preferences,
-    String? age,
+    int? age,
+    String? favorites,
   }) async {
-    if (currentUser == null) {
-      return false;
-    }
+    if (currentUser == null) return false;
 
     final normalizedEmail = email.trim().toLowerCase();
     final conflictingUser = await _findUser(normalizedEmail);
@@ -191,7 +191,8 @@ class AuthService {
       email: normalizedEmail,
       passwordHash: currentUser!.passwordHash,
       preferences: preferences.trim(),
-      age: age?.trim(),
+      age: age,
+      favorites: favorites ?? currentUser!.favorites,
       createdAt: currentUser!.createdAt,
     );
 
@@ -205,10 +206,7 @@ class AuthService {
     }
 
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-      'user_${updatedUser.email}',
-      jsonEncode(updatedUser.toJson()),
-    );
+    await prefs.setString('user_${updatedUser.email}', jsonEncode(updatedUser.toJson()));
     await _persistSession(updatedUser);
     currentUser = updatedUser;
     return true;
@@ -220,11 +218,7 @@ class AuthService {
   }) async {
     final normalizedEmail = email.trim().toLowerCase();
     final parsedUser = await _findUser(normalizedEmail);
-    if (parsedUser == null) {
-      return null;
-    }
-
-    if (_hashPassword(password) != parsedUser.passwordHash) {
+    if (parsedUser == null || _hashPassword(password) != parsedUser.passwordHash) {
       return null;
     }
 
@@ -240,19 +234,15 @@ class AuthService {
   }
 
   Future<void> clearForTests() async {
-    if (_db != null) {
-      await _db!.delete('users');
-    }
+    if (_db != null) await _db!.delete('users');
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_sessionKey);
     currentUser = null;
   }
 
   String _hashPassword(String password) {
-    final salt = 'petshop-salt-v1';
-    final bytes = utf8.encode('$salt:$password');
-    final digest = sha256.convert(bytes);
-    return digest.toString();
+    final bytes = utf8.encode('petshop-salt-v1:$password');
+    return sha256.convert(bytes).toString();
   }
 
   Future<void> _persistSession(UserProfile user) async {
@@ -260,29 +250,16 @@ class AuthService {
     await prefs.setString(_sessionKey, jsonEncode(user.toJson()));
   }
 
-  Future<bool> _userExists(String email) async {
-    final user = await _findUser(email);
-    return user != null;
-  }
+  Future<bool> _userExists(String email) async => (await _findUser(email)) != null;
 
   Future<UserProfile?> _findUser(String email) async {
     if (_db != null) {
-      final rows = await _db!.query(
-        'users',
-        where: 'email = ?',
-        whereArgs: [email],
-        limit: 1,
-      );
-      if (rows.isNotEmpty) {
-        return UserProfile.fromJson(rows.first.cast<String, dynamic>());
-      }
+      final rows = await _db!.query('users', where: 'email = ?', whereArgs: [email], limit: 1);
+      if (rows.isNotEmpty) return UserProfile.fromJson(rows.first.cast<String, dynamic>());
     }
 
     final prefs = await SharedPreferences.getInstance();
     final stored = prefs.getString('user_$email');
-    if (stored != null) {
-      return UserProfile.fromJson(jsonDecode(stored) as Map<String, dynamic>);
-    }
-    return null;
+    return stored != null ? UserProfile.fromJson(jsonDecode(stored)) : null;
   }
 }

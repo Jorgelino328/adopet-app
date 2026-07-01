@@ -113,7 +113,7 @@ class _AdoptionFormPageState extends State<AdoptionFormPage> {
                 controller: _noteController,
                 maxLines: 4,
                 decoration: const InputDecoration(
-                  labelText: 'Conte um pouco sobre seu dia a dia',
+                  labelText: 'Conte um pouco sobre você e por que deseja adotar.',
                 ),
                 validator: (value) {
                   if (value == null || value.trim().length < 10) {

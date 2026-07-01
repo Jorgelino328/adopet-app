@@ -45,7 +45,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
     _nameController.text = user.name;
     _emailController.text = user.email;
-    _ageController.text = user.age ?? '';
+    _ageController.text = user.age?.toString() ?? '';
 
     _selectedWantedPets
       ..clear()
@@ -66,10 +66,10 @@ class _ProfilePageState extends State<ProfilePage> {
     final success = await _authService.updateProfile(
       name: _nameController.text,
       email: _emailController.text,
-      age: _ageController.text, 
       preferences: UserProfile.serializePreferenceSelections(
         _selectedWantedPets.toList(),
       ),
+      age: int.tryParse(_ageController.text),
     );
 
     if (!mounted) {
@@ -142,7 +142,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      'Entre para salvar suas preferências de pets e usar essas informações nas buscas e no formulário de adoção.',
+                      'Entre para salvar suas preferências de pets e usar essas informações nas buscas.',
                     ),
                     const SizedBox(height: 16),
                     FilledButton.icon(
@@ -190,7 +190,13 @@ class _ProfilePageState extends State<ProfilePage> {
                     contentPadding: EdgeInsets.zero,
                     leading: const Icon(Icons.person_outline),
                     title: Text(user.name),
-                    subtitle: Text(user.email),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(user.email),
+                        if (user.age != null) Text('Idade: ${user.age} anos'),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 8),
                   if (user.preferences.isNotEmpty) ...[
@@ -203,9 +209,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       spacing: 8,
                       runSpacing: 8,
                       children:
-                          UserProfile.parsePreferenceSelections(
-                                user.preferences,
-                              )
+                          UserProfile.parsePreferenceSelections(user.preferences)
                               .map(
                                 (option) => Chip(
                                   label: Text(
@@ -254,7 +258,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     const SizedBox(height: 12),
                     TextField(
                       controller: _ageController,
-                      keyboardType: TextInputType.text,
+                      keyboardType: TextInputType.number,
                       decoration: const InputDecoration(
                         labelText: 'Idade (opcional)',
                       ),

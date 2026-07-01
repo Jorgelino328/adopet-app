@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/services/auth_service.dart';
-import '../../../../core/services/persistence_service.dart';
 import '../../../adoption/presentation/pages/adoption_form_page.dart';
 import '../../data/pet_service.dart';
 import '../widgets/pet_card.dart';
@@ -15,13 +14,11 @@ class ProductsPage extends StatefulWidget {
 
 class _ProductsPageState extends State<ProductsPage> {
   final PetApiService _apiService = PetApiService();
-  final PersistenceService _persistence = PersistenceService();
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
 
   List<PetItem> _pets = [];
   List<PetItem> _filteredPets = [];
-  List<String> _favoriteIds = [];
   bool _isLoading = false;
   String _searchText = '';
   
@@ -39,7 +36,6 @@ class _ProductsPageState extends State<ProductsPage> {
       );
     }
 
-    _loadFavorites();
     _loadPets();
   }
 
@@ -48,12 +44,6 @@ class _ProductsPageState extends State<ProductsPage> {
     _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
-  }
-
-  Future<void> _loadFavorites() async {
-    final favorites = await _persistence.loadFavoriteIds();
-    if (!mounted) return;
-    setState(() => _favoriteIds = favorites);
   }
 
   Future<void> _loadPets() async {
@@ -72,7 +62,6 @@ class _ProductsPageState extends State<ProductsPage> {
     final normalizedQuery = _searchText.trim().toLowerCase();
 
     return source.where((pet) {
-      // 1. Check if matches search text
       final matchesSearch = normalizedQuery.isEmpty ||
           [
             pet.name,
@@ -81,7 +70,6 @@ class _ProductsPageState extends State<ProductsPage> {
             UserProfile.labelForPreference(pet.type),
           ].join(' ').toLowerCase().contains(normalizedQuery);
       
-      // 2. Check if matches selected filters (If empty, show all)
       final matchesFilter = _selectedFilters.isEmpty || _selectedFilters.contains(pet.type);
 
       return matchesSearch && matchesFilter;
@@ -107,14 +95,31 @@ class _ProductsPageState extends State<ProductsPage> {
   }
 
   Future<void> _toggleFavorite(PetItem pet) async {
-    setState(() {
-      if (_favoriteIds.contains(pet.id)) {
-        _favoriteIds.remove(pet.id);
-      } else {
-        _favoriteIds.add(pet.id);
-      }
-    });
-    await _persistence.saveFavoriteIds(_favoriteIds);
+    final user = AuthService.instance.currentUser;
+    
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Faça login para curtir pets!')),
+      );
+      return;
+    }
+
+    List<String> favs = UserProfile.parsePreferenceSelections(user.favorites);
+    
+    if (favs.contains(pet.id)) {
+      favs.remove(pet.id);
+    } else {
+      favs.add(pet.id);
+    }
+
+    await AuthService.instance.updateProfile(
+      name: user.name,
+      email: user.email,
+      preferences: user.preferences,
+      favorites: UserProfile.serializePreferenceSelections(favs),
+    );
+    
+    setState(() {});
   }
 
   void _openAdoptionForm(PetItem pet) {
@@ -128,13 +133,15 @@ class _ProductsPageState extends State<ProductsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final currentUser = AuthService.instance.currentUser;
+    final List<String> favoriteIds = currentUser != null 
+        ? UserProfile.parsePreferenceSelections(currentUser.favorites) 
+        : [];
+
     return Scaffold(
       appBar: AppBar(title: const Text('Pets para adoção')),
       body: RefreshIndicator(
-        onRefresh: () async {
-          await _loadFavorites();
-          await _loadPets();
-        },
+        onRefresh: _loadPets,
         child: Column(
           children: [
             Padding(
@@ -190,7 +197,7 @@ class _ProductsPageState extends State<ProductsPage> {
                         final pet = _filteredPets[index];
                         return PetCard(
                           pet: pet,
-                          isFavorite: _favoriteIds.contains(pet.id),
+                          isFavorite: favoriteIds.contains(pet.id),
                           onFavoritePressed: () => _toggleFavorite(pet),
                           onAdoptPressed: () => _openAdoptionForm(pet),
                         );

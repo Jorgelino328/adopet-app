@@ -84,11 +84,6 @@ class PetCard extends StatelessWidget {
                     children: [
                       Chip(label: Text(UserProfile.labelForPreference(pet.type))),
                       const Spacer(),
-                      Text(
-                        pet.price,
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.bold),
-                      ),
                     ],
                   ),
                   const SizedBox(height: 12),
