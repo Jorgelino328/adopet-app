@@ -20,7 +20,7 @@ void main() {
         email: 'ana@example.com',
         password: 'supersecret',
         preferences: 'gatos,brinquedos',
-        existingPets: 'Nenhum',
+        age: 28, // Passed as int
       );
 
       expect(created, isTrue);
@@ -33,6 +33,7 @@ void main() {
       expect(user, isNotNull);
       expect(user!.name, 'Ana');
       expect(user.preferences, contains('gatos'));
+      expect(user.age, 28); // Expect int
     });
 
     test('updates the current user profile preferences', () async {
@@ -45,19 +46,19 @@ void main() {
         email: 'ana@example.com',
         password: 'supersecret',
         preferences: 'dog',
-        existingPets: 'Nenhum',
+        age: 31, // Passed as int
       );
 
       final updated = await auth.updateProfile(
         name: 'Ana',
         email: 'ana@example.com',
         preferences: 'dog,cat',
-        existingPets: 'Um gato',
+        age: 32, // Passed as int
       );
 
       expect(updated, isTrue);
       expect(auth.currentUser?.preferences, 'dog,cat');
-      expect(auth.currentUser?.existingPets, 'Um gato');
+      expect(auth.currentUser?.age, 32); // Expect int
     });
   });
 }

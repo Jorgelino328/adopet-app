@@ -16,8 +16,8 @@ class _ProfilePageState extends State<ProfilePage> {
   final _authService = AuthService.instance;
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
+  final _ageController = TextEditingController();
   final Set<String> _selectedWantedPets = <String>{};
-  final Set<String> _selectedHavePets = <String>{};
 
   bool _isSaving = false;
   bool _isEditing = false;
@@ -33,6 +33,7 @@ class _ProfilePageState extends State<ProfilePage> {
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
+    _ageController.dispose();
     super.dispose();
   }
 
@@ -44,12 +45,11 @@ class _ProfilePageState extends State<ProfilePage> {
 
     _nameController.text = user.name;
     _emailController.text = user.email;
+    _ageController.text = user.age?.toString() ?? '';
+
     _selectedWantedPets
       ..clear()
       ..addAll(UserProfile.parsePreferenceSelections(user.preferences));
-    _selectedHavePets
-      ..clear()
-      ..addAll(UserProfile.parsePreferenceSelections(user.existingPets));
   }
 
   Future<void> _saveProfile() async {
@@ -69,9 +69,7 @@ class _ProfilePageState extends State<ProfilePage> {
       preferences: UserProfile.serializePreferenceSelections(
         _selectedWantedPets.toList(),
       ),
-      existingPets: UserProfile.serializePreferenceSelections(
-        _selectedHavePets.toList(),
-      ),
+      age: int.tryParse(_ageController.text),
     );
 
     if (!mounted) {
@@ -144,7 +142,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      'Entre para salvar suas preferências de pets e usar essas informações nas buscas e no formulário de adoção.',
+                      'Entre para salvar suas preferências e começar a adotar pets!',
                     ),
                     const SizedBox(height: 16),
                     FilledButton.icon(
@@ -192,7 +190,13 @@ class _ProfilePageState extends State<ProfilePage> {
                     contentPadding: EdgeInsets.zero,
                     leading: const Icon(Icons.person_outline),
                     title: Text(user.name),
-                    subtitle: Text(user.email),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(user.email),
+                        if (user.age != null) Text('Idade: ${user.age} anos'),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 8),
                   if (user.preferences.isNotEmpty) ...[
@@ -205,33 +209,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       spacing: 8,
                       runSpacing: 8,
                       children:
-                          UserProfile.parsePreferenceSelections(
-                                user.preferences,
-                              )
-                              .map(
-                                (option) => Chip(
-                                  label: Text(
-                                    UserProfile.labelForPreference(option),
-                                  ),
-                                ),
-                              )
-                              .toList(),
-                    ),
-                  ],
-                  if (user.existingPets.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      'Você tem:',
-                      style: Theme.of(context).textTheme.titleSmall,
-                    ),
-                    const SizedBox(height: 6),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children:
-                          UserProfile.parsePreferenceSelections(
-                                user.existingPets,
-                              )
+                          UserProfile.parsePreferenceSelections(user.preferences)
                               .map(
                                 (option) => Chip(
                                   label: Text(
@@ -278,6 +256,14 @@ class _ProfilePageState extends State<ProfilePage> {
                       decoration: const InputDecoration(labelText: 'E-mail'),
                     ),
                     const SizedBox(height: 12),
+                    TextField(
+                      controller: _ageController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Idade (opcional)',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
                     Text(
                       'Que tipo de pet você quer?',
                       style: Theme.of(context).textTheme.titleSmall,
@@ -297,32 +283,6 @@ class _ProfilePageState extends State<ProfilePage> {
                                 _selectedWantedPets.add(option);
                               } else {
                                 _selectedWantedPets.remove(option);
-                              }
-                            });
-                          },
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Que tipo de pet você tem?',
-                      style: Theme.of(context).textTheme.titleSmall,
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: UserProfile.petPreferenceOptions.map((option) {
-                        final isSelected = _selectedHavePets.contains(option);
-                        return FilterChip(
-                          label: Text(UserProfile.labelForPreference(option)),
-                          selected: isSelected,
-                          onSelected: (selected) {
-                            setState(() {
-                              if (selected) {
-                                _selectedHavePets.add(option);
-                              } else {
-                                _selectedHavePets.remove(option);
                               }
                             });
                           },

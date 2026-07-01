@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/services/auth_service.dart';
-import '../../../../core/services/persistence_service.dart';
 import '../../../adoption/presentation/pages/adoption_form_page.dart';
 import '../../data/pet_service.dart';
 import '../widgets/pet_card.dart';
@@ -15,21 +14,28 @@ class ProductsPage extends StatefulWidget {
 
 class _ProductsPageState extends State<ProductsPage> {
   final PetApiService _apiService = PetApiService();
-  final PersistenceService _persistence = PersistenceService();
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
 
   List<PetItem> _pets = [];
   List<PetItem> _filteredPets = [];
-  List<String> _favoriteIds = [];
   bool _isLoading = false;
   String _searchText = '';
-  final Set<String> _activePreferenceFilters = <String>{};
+  
+  final Set<String> _selectedFilters = <String>{};
 
   @override
   void initState() {
     super.initState();
-    _loadFavorites();
+    
+    // Pre-select user preferences
+    final user = AuthService.instance.currentUser;
+    if (user != null && user.preferences.isNotEmpty) {
+      _selectedFilters.addAll(
+        UserProfile.parsePreferenceSelections(user.preferences),
+      );
+    }
+
     _loadPets();
   }
 
@@ -38,12 +44,6 @@ class _ProductsPageState extends State<ProductsPage> {
     _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
-  }
-
-  Future<void> _loadFavorites() async {
-    final favorites = await _persistence.loadFavoriteIds();
-    if (!mounted) return;
-    setState(() => _favoriteIds = favorites);
   }
 
   Future<void> _loadPets() async {
@@ -58,54 +58,22 @@ class _ProductsPageState extends State<ProductsPage> {
     });
   }
 
-  List<String> get _savedPreferences {
-    final user = AuthService.instance.currentUser;
-    if (user == null) {
-      return <String>[];
-    }
-    return UserProfile.parsePreferenceSelections(user.preferences);
-  }
-
   List<PetItem> _applyFilters(List<PetItem> source) {
     final normalizedQuery = _searchText.trim().toLowerCase();
-    final activeFilters = _activePreferenceFilters.isEmpty
-        ? _savedPreferences.toSet()
-        : _activePreferenceFilters;
 
     return source.where((pet) {
-      final matchesSearch =
-          normalizedQuery.isEmpty ||
+      final matchesSearch = normalizedQuery.isEmpty ||
           [
             pet.name,
             pet.breed,
             pet.description,
-            pet.tag,
+            UserProfile.labelForPreference(pet.type),
           ].join(' ').toLowerCase().contains(normalizedQuery);
-      final matchesPreference =
-          activeFilters.isEmpty ||
-          activeFilters.any(
-            (preference) => _petMatchesPreference(pet, preference),
-          );
-      return matchesSearch && matchesPreference;
-    }).toList();
-  }
+      
+      final matchesFilter = _selectedFilters.isEmpty || _selectedFilters.contains(pet.type);
 
-  bool _petMatchesPreference(PetItem pet, String preference) {
-    final normalized = preference.toLowerCase();
-    final lowerTag = pet.tag.toLowerCase();
-    switch (normalized) {
-      case 'dog':
-        return lowerTag.contains('cão') ||
-            lowerTag.contains('cao') ||
-            lowerTag.contains('cachorro');
-      case 'cat':
-        return lowerTag.contains('gato');
-      case 'bird':
-        return lowerTag.contains('pássaro') || lowerTag.contains('passaro');
-      case 'other':
-      default:
-        return lowerTag.contains('pequeno') || lowerTag.contains('pet');
-    }
+      return matchesSearch && matchesFilter;
+    }).toList();
   }
 
   void _onSearchChanged(String value) {
@@ -115,26 +83,43 @@ class _ProductsPageState extends State<ProductsPage> {
     });
   }
 
-  void _togglePreferenceFilter(String preference) {
+  void _toggleFilter(String type) {
     setState(() {
-      if (_activePreferenceFilters.contains(preference)) {
-        _activePreferenceFilters.remove(preference);
+      if (_selectedFilters.contains(type)) {
+        _selectedFilters.remove(type);
       } else {
-        _activePreferenceFilters.add(preference);
+        _selectedFilters.add(type);
       }
       _filteredPets = _applyFilters(_pets);
     });
   }
 
   Future<void> _toggleFavorite(PetItem pet) async {
-    setState(() {
-      if (_favoriteIds.contains(pet.id)) {
-        _favoriteIds.remove(pet.id);
-      } else {
-        _favoriteIds.add(pet.id);
-      }
-    });
-    await _persistence.saveFavoriteIds(_favoriteIds);
+    final user = AuthService.instance.currentUser;
+    
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Faça login para curtir pets!')),
+      );
+      return;
+    }
+
+    List<String> favs = UserProfile.parsePreferenceSelections(user.favorites);
+    
+    if (favs.contains(pet.id)) {
+      favs.remove(pet.id);
+    } else {
+      favs.add(pet.id);
+    }
+
+    await AuthService.instance.updateProfile(
+      name: user.name,
+      email: user.email,
+      preferences: user.preferences,
+      favorites: UserProfile.serializePreferenceSelections(favs),
+    );
+    
+    setState(() {});
   }
 
   void _openAdoptionForm(PetItem pet) {
@@ -148,14 +133,15 @@ class _ProductsPageState extends State<ProductsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final savedPreferences = _savedPreferences;
+    final currentUser = AuthService.instance.currentUser;
+    final List<String> favoriteIds = currentUser != null 
+        ? UserProfile.parsePreferenceSelections(currentUser.favorites) 
+        : [];
+
     return Scaffold(
       appBar: AppBar(title: const Text('Pets para adoção')),
       body: RefreshIndicator(
-        onRefresh: () async {
-          await _loadFavorites();
-          await _loadPets();
-        },
+        onRefresh: _loadPets,
         child: Column(
           children: [
             Padding(
@@ -172,31 +158,24 @@ class _ProductsPageState extends State<ProductsPage> {
                       border: OutlineInputBorder(),
                     ),
                   ),
-                  if (savedPreferences.isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      'Filtrando por suas preferências salvas',
-                      style: Theme.of(context).textTheme.titleSmall,
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: savedPreferences.map((preference) {
-                        final isSelected =
-                            _activePreferenceFilters.contains(preference) ||
-                            _activePreferenceFilters.isEmpty;
-                        return FilterChip(
-                          label: Text(
-                            UserProfile.labelForPreference(preference),
-                          ),
-                          selected: isSelected,
-                          onSelected: (_) =>
-                              _togglePreferenceFilter(preference),
-                        );
-                      }).toList(),
-                    ),
-                  ],
+                  const SizedBox(height: 12),
+                  Text(
+                    'Filtrar por tipo:',
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: UserProfile.petPreferenceOptions.map((type) {
+                      final isSelected = _selectedFilters.contains(type);
+                      return FilterChip(
+                        label: Text(UserProfile.labelForPreference(type)),
+                        selected: isSelected,
+                        onSelected: (_) => _toggleFilter(type),
+                      );
+                    }).toList(),
+                  ),
                 ],
               ),
             ),
@@ -207,7 +186,7 @@ class _ProductsPageState extends State<ProductsPage> {
                   ? const Center(
                       child: Padding(
                         padding: EdgeInsets.all(24),
-                        child: Text('Nenhum pet corresponde à sua busca.'),
+                        child: Text('Nenhum pet corresponde à sua busca/filtro.'),
                       ),
                     )
                   : ListView.builder(
@@ -218,7 +197,7 @@ class _ProductsPageState extends State<ProductsPage> {
                         final pet = _filteredPets[index];
                         return PetCard(
                           pet: pet,
-                          isFavorite: _favoriteIds.contains(pet.id),
+                          isFavorite: favoriteIds.contains(pet.id),
                           onFavoritePressed: () => _toggleFavorite(pet),
                           onAdoptPressed: () => _openAdoptionForm(pet),
                         );

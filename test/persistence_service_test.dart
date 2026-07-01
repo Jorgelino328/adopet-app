@@ -5,13 +5,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('persists favorite pet ids across saves and loads', () async {
+  test('persists adoption submissions across saves and loads', () async {
     SharedPreferences.setMockInitialValues({});
     final persistence = PersistenceService();
 
-    await persistence.saveFavoriteIds(['p1', 'p2']);
-    final savedFavorites = await persistence.loadFavoriteIds();
+    final submission = {'name': 'Ana', 'petPreference': 'Luna'};
+    await persistence.saveSubmission(submission);
+    
+    final savedSubmissions = await persistence.loadSubmissions();
 
-    expect(savedFavorites, ['p1', 'p2']);
+    expect(savedSubmissions.length, 1);
+    expect(savedSubmissions.first['name'], 'Ana');
   });
 }

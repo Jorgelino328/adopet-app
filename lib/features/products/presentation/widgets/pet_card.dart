@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/services/auth_service.dart';
 import '../../data/pet_service.dart';
 
 class PetCard extends StatelessWidget {
@@ -36,6 +37,14 @@ class PetCard extends StatelessWidget {
                 height: 170,
                 width: double.infinity,
                 fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    height: 170,
+                    width: double.infinity,
+                    color: Colors.grey[300],
+                    child: const Icon(Icons.broken_image, size: 50, color: Colors.grey),
+                  );
+                },
               ),
             ),
             Padding(
@@ -73,13 +82,8 @@ class PetCard extends StatelessWidget {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Chip(label: Text(pet.tag)),
+                      Chip(label: Text(UserProfile.labelForPreference(pet.type))),
                       const Spacer(),
-                      Text(
-                        pet.price,
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.bold),
-                      ),
                     ],
                   ),
                   const SizedBox(height: 12),

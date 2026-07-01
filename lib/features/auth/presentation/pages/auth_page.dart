@@ -18,7 +18,6 @@ class _AuthPageState extends State<AuthPage> {
   final _passwordController = TextEditingController();
   final _authService = AuthService.instance;
   final Set<String> _selectedWantedPets = <String>{};
-  final Set<String> _selectedHavePets = <String>{};
 
   bool _isSignUp = true;
   bool _isSubmitting = false;
@@ -49,9 +48,6 @@ class _AuthPageState extends State<AuthPage> {
             password: _passwordController.text,
             preferences: UserProfile.serializePreferenceSelections(
               _selectedWantedPets.toList(),
-            ),
-            existingPets: UserProfile.serializePreferenceSelections(
-              _selectedHavePets.toList(),
             ),
           )
         : await _authService.signIn(
@@ -164,34 +160,6 @@ class _AuthPageState extends State<AuthPage> {
                                   _selectedWantedPets.add(option);
                                 } else {
                                   _selectedWantedPets.remove(option);
-                                }
-                              });
-                            },
-                          );
-                        }).toList(),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Que tipo de pet você tem?',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: UserProfile.petPreferenceOptions.map((
-                          option,
-                        ) {
-                          final isSelected = _selectedHavePets.contains(option);
-                          return FilterChip(
-                            label: Text(UserProfile.labelForPreference(option)),
-                            selected: isSelected,
-                            onSelected: (selected) {
-                              setState(() {
-                                if (selected) {
-                                  _selectedHavePets.add(option);
-                                } else {
-                                  _selectedHavePets.remove(option);
                                 }
                               });
                             },
