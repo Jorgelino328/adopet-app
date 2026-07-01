@@ -16,8 +16,8 @@ class _ProfilePageState extends State<ProfilePage> {
   final _authService = AuthService.instance;
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
+  final _ageController = TextEditingController();
   final Set<String> _selectedWantedPets = <String>{};
-  final Set<String> _selectedHavePets = <String>{};
 
   bool _isSaving = false;
   bool _isEditing = false;
@@ -33,6 +33,7 @@ class _ProfilePageState extends State<ProfilePage> {
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
+    _ageController.dispose();
     super.dispose();
   }
 
@@ -44,12 +45,11 @@ class _ProfilePageState extends State<ProfilePage> {
 
     _nameController.text = user.name;
     _emailController.text = user.email;
+    _ageController.text = user.age ?? '';
+
     _selectedWantedPets
       ..clear()
       ..addAll(UserProfile.parsePreferenceSelections(user.preferences));
-    _selectedHavePets
-      ..clear()
-      ..addAll(UserProfile.parsePreferenceSelections(user.existingPets));
   }
 
   Future<void> _saveProfile() async {
@@ -66,11 +66,9 @@ class _ProfilePageState extends State<ProfilePage> {
     final success = await _authService.updateProfile(
       name: _nameController.text,
       email: _emailController.text,
+      age: _ageController.text, 
       preferences: UserProfile.serializePreferenceSelections(
         _selectedWantedPets.toList(),
-      ),
-      existingPets: UserProfile.serializePreferenceSelections(
-        _selectedHavePets.toList(),
       ),
     );
 
@@ -218,30 +216,6 @@ class _ProfilePageState extends State<ProfilePage> {
                               .toList(),
                     ),
                   ],
-                  if (user.existingPets.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      'Você tem:',
-                      style: Theme.of(context).textTheme.titleSmall,
-                    ),
-                    const SizedBox(height: 6),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children:
-                          UserProfile.parsePreferenceSelections(
-                                user.existingPets,
-                              )
-                              .map(
-                                (option) => Chip(
-                                  label: Text(
-                                    UserProfile.labelForPreference(option),
-                                  ),
-                                ),
-                              )
-                              .toList(),
-                    ),
-                  ],
                   const SizedBox(height: 12),
                   FilledButton.icon(
                     onPressed: () => setState(() => _isEditing = true),
@@ -278,6 +252,14 @@ class _ProfilePageState extends State<ProfilePage> {
                       decoration: const InputDecoration(labelText: 'E-mail'),
                     ),
                     const SizedBox(height: 12),
+                    TextField(
+                      controller: _ageController,
+                      keyboardType: TextInputType.text,
+                      decoration: const InputDecoration(
+                        labelText: 'Idade (opcional)',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
                     Text(
                       'Que tipo de pet você quer?',
                       style: Theme.of(context).textTheme.titleSmall,
@@ -297,32 +279,6 @@ class _ProfilePageState extends State<ProfilePage> {
                                 _selectedWantedPets.add(option);
                               } else {
                                 _selectedWantedPets.remove(option);
-                              }
-                            });
-                          },
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Que tipo de pet você tem?',
-                      style: Theme.of(context).textTheme.titleSmall,
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: UserProfile.petPreferenceOptions.map((option) {
-                        final isSelected = _selectedHavePets.contains(option);
-                        return FilterChip(
-                          label: Text(UserProfile.labelForPreference(option)),
-                          selected: isSelected,
-                          onSelected: (selected) {
-                            setState(() {
-                              if (selected) {
-                                _selectedHavePets.add(option);
-                              } else {
-                                _selectedHavePets.remove(option);
                               }
                             });
                           },

@@ -13,7 +13,7 @@ class UserProfile {
     required this.email,
     required this.passwordHash,
     required this.preferences,
-    required this.existingPets,
+    this.age,
     required this.createdAt,
   });
 
@@ -24,7 +24,7 @@ class UserProfile {
   final String email;
   final String passwordHash;
   final String preferences;
-  final String existingPets;
+  final String? age;
   final DateTime createdAt;
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
@@ -34,7 +34,7 @@ class UserProfile {
       email: json['email'] as String,
       passwordHash: json['passwordHash'] as String,
       preferences: json['preferences'] as String,
-      existingPets: json['existingPets'] as String,
+      age: json['age'] as String?,
       createdAt: DateTime.parse(json['createdAt'] as String),
     );
   }
@@ -46,7 +46,7 @@ class UserProfile {
       'email': email,
       'passwordHash': passwordHash,
       'preferences': preferences,
-      'existingPets': existingPets,
+      'age': age,
       'createdAt': createdAt.toIso8601String(),
     };
   }
@@ -99,7 +99,7 @@ class AuthService {
       }
       _db = await openDatabase(
         'pet_shop.db',
-        version: 1,
+        version: 2,
         onCreate: (db, version) async {
           await db.execute('''
             CREATE TABLE users (
@@ -108,10 +108,21 @@ class AuthService {
               email TEXT NOT NULL UNIQUE,
               passwordHash TEXT NOT NULL,
               preferences TEXT NOT NULL,
-              existingPets TEXT NOT NULL,
+              age TEXT,
               createdAt TEXT NOT NULL
             )
           ''');
+        },
+        onUpgrade: (db, oldVersion, newVersion) async {
+          if (oldVersion < 2) {
+            final columns = await db.rawQuery('PRAGMA table_info(users)');
+            final hasAgeColumn = columns.any(
+              (column) => (column['name'] as String?) == 'age',
+            );
+            if (!hasAgeColumn) {
+              await db.execute('ALTER TABLE users ADD COLUMN age TEXT');
+            }
+          }
         },
       );
     }
@@ -130,7 +141,7 @@ class AuthService {
     required String email,
     required String password,
     required String preferences,
-    required String existingPets,
+    String? age,
   }) async {
     final normalizedEmail = email.trim().toLowerCase();
     if (await _userExists(normalizedEmail)) {
@@ -143,7 +154,7 @@ class AuthService {
       email: normalizedEmail,
       passwordHash: _hashPassword(password),
       preferences: preferences.trim(),
-      existingPets: existingPets.trim(),
+      age: age?.trim(),
       createdAt: DateTime.now(),
     );
 
@@ -162,7 +173,7 @@ class AuthService {
     required String name,
     required String email,
     required String preferences,
-    required String existingPets,
+    String? age,
   }) async {
     if (currentUser == null) {
       return false;
@@ -180,7 +191,7 @@ class AuthService {
       email: normalizedEmail,
       passwordHash: currentUser!.passwordHash,
       preferences: preferences.trim(),
-      existingPets: existingPets.trim(),
+      age: age?.trim(),
       createdAt: currentUser!.createdAt,
     );
 

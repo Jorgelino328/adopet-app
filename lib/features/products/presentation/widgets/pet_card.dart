@@ -18,6 +18,20 @@ class PetCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final imageWidget = pet.imageUrl.startsWith('assets/')
+        ? Image.asset(
+            pet.imageUrl,
+            height: 170,
+            width: double.infinity,
+            fit: BoxFit.cover,
+          )
+        : Image.network(
+            pet.imageUrl,
+            height: 170,
+            width: double.infinity,
+            fit: BoxFit.cover,
+          );
+
     return AnimatedContainer(
       duration: const Duration(milliseconds: 250),
       margin: const EdgeInsets.only(bottom: 12),
@@ -31,12 +45,7 @@ class PetCard extends StatelessWidget {
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(20),
               ),
-              child: Image.network(
-                pet.imageUrl,
-                height: 170,
-                width: double.infinity,
-                fit: BoxFit.cover,
-              ),
+              child: imageWidget,
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
@@ -62,7 +71,7 @@ class PetCard extends StatelessWidget {
                     ],
                   ),
                   Text(
-                    '${pet.breed} • ${pet.age}',
+                    pet.breed,
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                   const SizedBox(height: 8),
@@ -70,23 +79,17 @@ class PetCard extends StatelessWidget {
                     pet.description,
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
                   Row(
                     children: [
-                      Chip(label: Text(pet.tag)),
+                      Chip(label: Text(pet.type.toUpperCase())),
                       const Spacer(),
-                      Text(
-                        pet.price,
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.bold),
+                      FilledButton.icon(
+                        onPressed: onAdoptPressed,
+                        icon: const Icon(Icons.pets),
+                        label: const Text('Quero adotar'),
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 12),
-                  FilledButton.icon(
-                    onPressed: onAdoptPressed,
-                    icon: const Icon(Icons.pets),
-                    label: const Text('Quero adotar'),
                   ),
                 ],
               ),

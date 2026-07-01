@@ -15,9 +15,6 @@ class AdoptionFormPage extends StatefulWidget {
 
 class _AdoptionFormPageState extends State<AdoptionFormPage> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _ageController = TextEditingController();
   final _noteController = TextEditingController();
   final PersistenceService _persistence = PersistenceService();
 
@@ -26,11 +23,6 @@ class _AdoptionFormPageState extends State<AdoptionFormPage> {
   @override
   void initState() {
     super.initState();
-    final currentUser = AuthService.instance.currentUser;
-    if (currentUser != null) {
-      _nameController.text = currentUser.name;
-      _emailController.text = currentUser.email;
-    }
     if (widget.selectedPet != null) {
       _petPreference = widget.selectedPet!.name;
     }
@@ -38,9 +30,6 @@ class _AdoptionFormPageState extends State<AdoptionFormPage> {
 
   @override
   void dispose() {
-    _nameController.dispose();
-    _emailController.dispose();
-    _ageController.dispose();
     _noteController.dispose();
     super.dispose();
   }
@@ -50,10 +39,19 @@ class _AdoptionFormPageState extends State<AdoptionFormPage> {
       return;
     }
 
+    final currentUser = AuthService.instance.currentUser;
+    
+    if (currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Você precisa estar logado para adotar.')),
+      );
+      return;
+    }
+
     final submission = {
-      'name': _nameController.text.trim(),
-      'email': _emailController.text.trim(),
-      'age': _ageController.text.trim(),
+      'name': currentUser.name,
+      'email': currentUser.email,
+      'age': currentUser.age ?? 'Não informada',
       'petPreference': _petPreference ?? 'Preferência não informada',
       'note': _noteController.text.trim(),
       'timestamp': DateTime.now().toIso8601String(),
@@ -66,7 +64,7 @@ class _AdoptionFormPageState extends State<AdoptionFormPage> {
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Formulário salvo com sucesso!')),
+      const SnackBar(content: Text('Interesse registrado com sucesso!')),
     );
     Navigator.of(context).pop();
   }
@@ -74,8 +72,9 @@ class _AdoptionFormPageState extends State<AdoptionFormPage> {
   @override
   Widget build(BuildContext context) {
     final selectedPetName = widget.selectedPet?.name ?? 'Seu futuro pet';
+    
     return Scaffold(
-      appBar: AppBar(title: const Text('Formulário de adoção')),
+      appBar: AppBar(title: const Text('Confirmar Adoção')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Form(
@@ -91,48 +90,9 @@ class _AdoptionFormPageState extends State<AdoptionFormPage> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Complete as informações de $selectedPetName para registrar seu interesse.',
+                'Confirme seu interesse em $selectedPetName. Seus dados (nome, e-mail e idade) serão enviados automaticamente a partir do seu perfil.',
               ),
               const SizedBox(height: 20),
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Seu nome'),
-                validator: (value) => (value == null || value.trim().isEmpty)
-                    ? 'Informe seu nome'
-                    : null,
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(labelText: 'E-mail'),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Informe seu e-mail';
-                  }
-                  if (!value.contains('@')) {
-                    return 'E-mail inválido';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _ageController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Idade'),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Informe sua idade';
-                  }
-                  final age = int.tryParse(value);
-                  if (age == null || age < 18) {
-                    return 'A adoção precisa ser autorizada por um maior de 18 anos';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 initialValue: _petPreference,
                 decoration: const InputDecoration(
@@ -168,7 +128,7 @@ class _AdoptionFormPageState extends State<AdoptionFormPage> {
                 child: FilledButton.icon(
                   onPressed: _submit,
                   icon: const Icon(Icons.send),
-                  label: const Text('Salvar interesse'),
+                  label: const Text('Confirmar Adoção'),
                 ),
               ),
             ],
