@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/services/auth_service.dart';
+import '../../../auth/presentation/pages/auth_page.dart';
 
 class ProfilePage extends StatefulWidget {
-  const ProfilePage({super.key, required this.onSignedOut});
+  const ProfilePage({super.key, this.onSignedOut});
 
-  final VoidCallback onSignedOut;
+  final VoidCallback? onSignedOut;
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
@@ -90,13 +91,73 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
+  Future<void> _openAuthPage() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => AuthPage(
+          onAuthenticated: () {
+            Navigator.of(context).pop();
+            widget.onSignedOut?.call();
+            setState(() {});
+          },
+        ),
+      ),
+    );
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  Future<void> _signOut() async {
+    await _authService.signOut();
+    widget.onSignedOut?.call();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _isEditing = false;
+      _message = 'Você saiu da conta.';
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = _authService.currentUser;
 
     if (user == null) {
-      return const Scaffold(
-        body: Center(child: Text('Faça login para ver seu perfil.')),
+      return Scaffold(
+        appBar: AppBar(title: const Text('Meu perfil')),
+        body: ListView(
+          padding: const EdgeInsets.all(24),
+          children: [
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Você está navegando como visitante',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Entre para salvar suas preferências de pets e usar essas informações nas buscas e no formulário de adoção.',
+                    ),
+                    const SizedBox(height: 16),
+                    FilledButton.icon(
+                      onPressed: _openAuthPage,
+                      icon: const Icon(Icons.login_outlined),
+                      label: const Text('Entrar ou criar conta'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       );
     }
 
@@ -105,7 +166,7 @@ class _ProfilePageState extends State<ProfilePage> {
         title: const Text('Meu perfil'),
         actions: [
           TextButton.icon(
-            onPressed: widget.onSignedOut,
+            onPressed: _signOut,
             icon: const Icon(Icons.logout_outlined),
             label: const Text('Sair'),
           ),

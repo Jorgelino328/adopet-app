@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'core/services/auth_service.dart';
 import 'core/theme/app_theme.dart';
 import 'features/adoption/presentation/pages/adoption_form_page.dart';
-import 'features/auth/presentation/pages/auth_page.dart';
 import 'features/home/presentation/pages/home_page.dart';
 import 'features/products/presentation/pages/products_page.dart';
 import 'features/profile/presentation/pages/profile_page.dart';
@@ -18,7 +17,6 @@ class PetShopApp extends StatefulWidget {
 class _PetShopAppState extends State<PetShopApp> {
   final _authService = AuthService.instance;
   bool _isReady = false;
-  bool _isAuthenticated = false;
 
   @override
   void initState() {
@@ -33,7 +31,6 @@ class _PetShopAppState extends State<PetShopApp> {
     }
     setState(() {
       _isReady = true;
-      _isAuthenticated = _authService.currentUser != null;
     });
   }
 
@@ -44,23 +41,14 @@ class _PetShopAppState extends State<PetShopApp> {
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(),
       home: _isReady
-          ? (_isAuthenticated
-                ? PetShopShell(
-                    onSignedOut: () => setState(() => _isAuthenticated = false),
-                  )
-                : AuthPage(
-                    onAuthenticated: () =>
-                        setState(() => _isAuthenticated = true),
-                  ))
+          ? const PetShopShell()
           : const Scaffold(body: Center(child: CircularProgressIndicator())),
     );
   }
 }
 
 class PetShopShell extends StatefulWidget {
-  const PetShopShell({super.key, required this.onSignedOut});
-
-  final VoidCallback onSignedOut;
+  const PetShopShell({super.key});
 
   @override
   State<PetShopShell> createState() => _PetShopShellState();
@@ -68,18 +56,12 @@ class PetShopShell extends StatefulWidget {
 
 class _PetShopShellState extends State<PetShopShell> {
   int _currentIndex = 0;
-  late final List<Widget> _pages;
-
-  @override
-  void initState() {
-    super.initState();
-    _pages = [
-      const HomePage(),
-      const ProductsPage(),
-      const AdoptionFormPage(),
-      ProfilePage(onSignedOut: widget.onSignedOut),
-    ];
-  }
+  final List<Widget> _pages = const [
+    HomePage(),
+    ProductsPage(),
+    AdoptionFormPage(),
+    ProfilePage(),
+  ];
 
   @override
   Widget build(BuildContext context) {

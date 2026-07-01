@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/services/auth_service.dart';
 import '../../../../core/services/persistence_service.dart';
 import '../../../products/data/pet_service.dart';
 
@@ -25,6 +26,11 @@ class _AdoptionFormPageState extends State<AdoptionFormPage> {
   @override
   void initState() {
     super.initState();
+    final currentUser = AuthService.instance.currentUser;
+    if (currentUser != null) {
+      _nameController.text = currentUser.name;
+      _emailController.text = currentUser.email;
+    }
     if (widget.selectedPet != null) {
       _petPreference = widget.selectedPet!.name;
     }
