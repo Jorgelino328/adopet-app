@@ -1,6 +1,6 @@
-# Pet shop
+# Adopet
 
-Aplicativo de petshop feito com Flutter.
+Aplicativo de adoção de animais desenvolvido com Flutter.
 
 ## Como executar
 
