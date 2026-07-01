@@ -1,12 +1,40 @@
 import 'package:flutter/material.dart';
 
+import 'core/services/auth_service.dart';
 import 'core/theme/app_theme.dart';
 import 'features/adoption/presentation/pages/adoption_form_page.dart';
+import 'features/auth/presentation/pages/auth_page.dart';
 import 'features/home/presentation/pages/home_page.dart';
 import 'features/products/presentation/pages/products_page.dart';
 
-class PetShopApp extends StatelessWidget {
+class PetShopApp extends StatefulWidget {
   const PetShopApp({super.key});
+
+  @override
+  State<PetShopApp> createState() => _PetShopAppState();
+}
+
+class _PetShopAppState extends State<PetShopApp> {
+  final _authService = AuthService.instance;
+  bool _isReady = false;
+  bool _isAuthenticated = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initialize();
+  }
+
+  Future<void> _initialize() async {
+    await _authService.initialize();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _isReady = true;
+      _isAuthenticated = _authService.currentUser != null;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -14,7 +42,9 @@ class PetShopApp extends StatelessWidget {
       title: 'Pet Shop',
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(),
-      home: const PetShopShell(),
+      home: _isReady
+          ? (_isAuthenticated ? const PetShopShell() : AuthPage(onAuthenticated: () => setState(() => _isAuthenticated = true)))
+          : const Scaffold(body: Center(child: CircularProgressIndicator())),
     );
   }
 }
