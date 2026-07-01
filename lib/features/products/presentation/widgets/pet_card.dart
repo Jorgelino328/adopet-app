@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/services/auth_service.dart';
 import '../../data/pet_service.dart';
 
 class PetCard extends StatelessWidget {
@@ -18,20 +19,6 @@ class PetCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final imageWidget = pet.imageUrl.startsWith('assets/')
-        ? Image.asset(
-            pet.imageUrl,
-            height: 170,
-            width: double.infinity,
-            fit: BoxFit.cover,
-          )
-        : Image.network(
-            pet.imageUrl,
-            height: 170,
-            width: double.infinity,
-            fit: BoxFit.cover,
-          );
-
     return AnimatedContainer(
       duration: const Duration(milliseconds: 250),
       margin: const EdgeInsets.only(bottom: 12),
@@ -45,7 +32,20 @@ class PetCard extends StatelessWidget {
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(20),
               ),
-              child: imageWidget,
+              child: Image.network(
+                pet.imageUrl,
+                height: 170,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    height: 170,
+                    width: double.infinity,
+                    color: Colors.grey[300],
+                    child: const Icon(Icons.broken_image, size: 50, color: Colors.grey),
+                  );
+                },
+              ),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
@@ -71,7 +71,7 @@ class PetCard extends StatelessWidget {
                     ],
                   ),
                   Text(
-                    pet.breed,
+                    '${pet.breed} • ${pet.age}',
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                   const SizedBox(height: 8),
@@ -79,17 +79,23 @@ class PetCard extends StatelessWidget {
                     pet.description,
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
                   Row(
                     children: [
-                      Chip(label: Text(pet.type.toUpperCase())),
+                      Chip(label: Text(UserProfile.labelForPreference(pet.type))),
                       const Spacer(),
-                      FilledButton.icon(
-                        onPressed: onAdoptPressed,
-                        icon: const Icon(Icons.pets),
-                        label: const Text('Quero adotar'),
+                      Text(
+                        pet.price,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 12),
+                  FilledButton.icon(
+                    onPressed: onAdoptPressed,
+                    icon: const Icon(Icons.pets),
+                    label: const Text('Quero adotar'),
                   ),
                 ],
               ),

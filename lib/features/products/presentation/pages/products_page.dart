@@ -14,31 +14,96 @@ class ProductsPage extends StatefulWidget {
 }
 
 class _ProductsPageState extends State<ProductsPage> {
+  final PetApiService _apiService = PetApiService();
   final PersistenceService _persistence = PersistenceService();
-  final Set<String> _selectedFilters = <String>{};
-  
-  List<PetItem> _allPets = [];
+  final ScrollController _scrollController = ScrollController();
+  final TextEditingController _searchController = TextEditingController();
+
+  List<PetItem> _pets = [];
+  List<PetItem> _filteredPets = [];
   List<String> _favoriteIds = [];
+  bool _isLoading = false;
+  String _searchText = '';
+  
+  final Set<String> _selectedFilters = <String>{};
 
   @override
   void initState() {
     super.initState();
     
-    _allPets = PetService.pets;
-    _loadFavorites();
-
+    // Pre-select user preferences
     final user = AuthService.instance.currentUser;
     if (user != null && user.preferences.isNotEmpty) {
       _selectedFilters.addAll(
         UserProfile.parsePreferenceSelections(user.preferences),
       );
     }
+
+    _loadFavorites();
+    _loadPets();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadFavorites() async {
     final favorites = await _persistence.loadFavoriteIds();
     if (!mounted) return;
     setState(() => _favoriteIds = favorites);
+  }
+
+  Future<void> _loadPets() async {
+    setState(() => _isLoading = true);
+    final loadedPets = await _apiService.fetchPets(page: 1, pageSize: 100);
+    if (!mounted) return;
+
+    setState(() {
+      _pets = loadedPets;
+      _filteredPets = _applyFilters(loadedPets);
+      _isLoading = false;
+    });
+  }
+
+  List<PetItem> _applyFilters(List<PetItem> source) {
+    final normalizedQuery = _searchText.trim().toLowerCase();
+
+    return source.where((pet) {
+      // 1. Check if matches search text
+      final matchesSearch = normalizedQuery.isEmpty ||
+          [
+            pet.name,
+            pet.breed,
+            pet.description,
+            UserProfile.labelForPreference(pet.type),
+          ].join(' ').toLowerCase().contains(normalizedQuery);
+      
+      // 2. Check if matches selected filters (If empty, show all)
+      final matchesFilter = _selectedFilters.isEmpty || _selectedFilters.contains(pet.type);
+
+      return matchesSearch && matchesFilter;
+    }).toList();
+  }
+
+  void _onSearchChanged(String value) {
+    setState(() {
+      _searchText = value;
+      _filteredPets = _applyFilters(_pets);
+    });
+  }
+
+  void _toggleFilter(String type) {
+    setState(() {
+      if (_selectedFilters.contains(type)) {
+        _selectedFilters.remove(type);
+      } else {
+        _selectedFilters.add(type);
+      }
+      _filteredPets = _applyFilters(_pets);
+    });
   }
 
   Future<void> _toggleFavorite(PetItem pet) async {
@@ -63,81 +128,77 @@ class _ProductsPageState extends State<ProductsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final filteredPets = _allPets.where((pet) {
-      if (_selectedFilters.isEmpty) {
-        return true;
-      }
-      return _selectedFilters.contains(pet.type);
-    }).toList();
-
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Pets para Adoção'),
-      ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Filtrar por tipo:',
-                  style: Theme.of(context).textTheme.titleSmall,
-                ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  width: double.infinity,
-                  child: Wrap(
-                    spacing: 8.0,
-                    runSpacing: 8.0,
+      appBar: AppBar(title: const Text('Pets para adoção')),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await _loadFavorites();
+          await _loadPets();
+        },
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: _searchController,
+                    onChanged: _onSearchChanged,
+                    decoration: const InputDecoration(
+                      hintText: 'Buscar por nome, raça ou descrição',
+                      prefixIcon: Icon(Icons.search),
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Filtrar por tipo:',
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
                     children: UserProfile.petPreferenceOptions.map((type) {
                       final isSelected = _selectedFilters.contains(type);
                       return FilterChip(
                         label: Text(UserProfile.labelForPreference(type)),
                         selected: isSelected,
-                        onSelected: (selected) {
-                          setState(() {
-                            if (selected) {
-                              _selectedFilters.add(type);
-                            } else {
-                              _selectedFilters.remove(type);
-                            }
-                          });
-                        },
+                        onSelected: (_) => _toggleFilter(type),
                       );
                     }).toList(),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const Divider(height: 1),
-          Expanded(
-            child: filteredPets.isEmpty
-                ? Center(
-                    child: Text(
-                      'Nenhum pet encontrado com esses filtros.',
-                      style: Theme.of(context).textTheme.bodyLarge,
+            Expanded(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _filteredPets.isEmpty
+                  ? const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Text('Nenhum pet corresponde à sua busca/filtro.'),
+                      ),
+                    )
+                  : ListView.builder(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+                      itemCount: _filteredPets.length,
+                      itemBuilder: (context, index) {
+                        final pet = _filteredPets[index];
+                        return PetCard(
+                          pet: pet,
+                          isFavorite: _favoriteIds.contains(pet.id),
+                          onFavoritePressed: () => _toggleFavorite(pet),
+                          onAdoptPressed: () => _openAdoptionForm(pet),
+                        );
+                      },
                     ),
-                  )
-                : ListView.separated(
-                    padding: const EdgeInsets.all(16.0),
-                    itemCount: filteredPets.length,
-                    separatorBuilder: (context, index) => const SizedBox(height: 12),
-                    itemBuilder: (context, index) {
-                      final pet = filteredPets[index];
-                      return PetCard(
-                        pet: pet,
-                        isFavorite: _favoriteIds.contains(pet.id),
-                        onFavoritePressed: () => _toggleFavorite(pet),
-                        onAdoptPressed: () => _openAdoptionForm(pet),
-                      );
-                    },
-                  ),
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }
