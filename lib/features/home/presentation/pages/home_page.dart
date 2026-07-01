@@ -30,7 +30,15 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(title: const Text('AdoPet')),
+      appBar: AppBar(title: const Text(
+            'AdoPet',
+            style: TextStyle(
+              fontSize: 32.0,
+              fontWeight: FontWeight.w900,
+              color: Color(0xFF5C6BC0),
+              letterSpacing: 1.2,
+            ),
+          )),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
