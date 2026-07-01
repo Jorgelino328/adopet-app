@@ -142,7 +142,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      'Entre para salvar suas preferências de pets e usar essas informações nas buscas.',
+                      'Entre para salvar suas preferências e começar a adotar pets!',
                     ),
                     const SizedBox(height: 16),
                     FilledButton.icon(
