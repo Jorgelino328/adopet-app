@@ -6,14 +6,14 @@ import 'features/home/presentation/pages/home_page.dart';
 import 'features/products/presentation/pages/products_page.dart';
 import 'features/profile/presentation/pages/profile_page.dart';
 
-class PetShopApp extends StatefulWidget {
-  const PetShopApp({super.key});
+class AdopetApp extends StatefulWidget {
+  const AdopetApp({super.key});
 
   @override
-  State<PetShopApp> createState() => _PetShopAppState();
+  State<AdopetApp> createState() => _AdopetAppState();
 }
 
-class _PetShopAppState extends State<PetShopApp> {
+class _AdopetAppState extends State<AdopetApp> {
   final _authService = AuthService.instance;
   bool _isReady = false;
 
@@ -40,20 +40,20 @@ class _PetShopAppState extends State<PetShopApp> {
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(),
       home: _isReady
-          ? const PetShopShell()
+          ? const AdopetShell()
           : const Scaffold(body: Center(child: CircularProgressIndicator())),
     );
   }
 }
 
-class PetShopShell extends StatefulWidget {
-  const PetShopShell({super.key});
+class AdopetShell extends StatefulWidget {
+  const AdopetShell({super.key});
 
   @override
-  State<PetShopShell> createState() => _PetShopShellState();
+  State<AdopetShell> createState() => _AdopetShellState();
 }
 
-class _PetShopShellState extends State<PetShopShell> {
+class _AdopetShellState extends State<AdopetShell> {
   int _currentIndex = 0;
   final List<Widget> _pages = const [
     HomePage(),

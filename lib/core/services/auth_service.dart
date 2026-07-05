@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:crypto/crypto.dart';
+import 'package:auth0_flutter/auth0_flutter.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -94,15 +94,17 @@ class AuthService {
 
   Database? _db;
   UserProfile? currentUser;
+  late Auth0 _auth0;
 
   Future<void> initialize() async {
+    _auth0 = Auth0('dev-jzwhcfe325islwqz.us.auth0.com', 'O8SiIN38jquZ3FWghtWzSE676DwQ7EAb');
     if (!kIsWeb) {
       if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
         sqfliteFfiInit();
         databaseFactory = databaseFactoryFfi;
       }
       _db = await openDatabase(
-        'pet_shop.db',
+        'adopet.db',
         version: 3,
         onCreate: (db, version) async {
           await db.execute('''
@@ -136,59 +138,19 @@ class AuthService {
     }
   }
 
-  Future<bool> signUp({
+Future<bool> updateProfile({
     required String name,
-    required String email,
-    required String password,
-    required String preferences,
-    int? age,
-  }) async {
-    final normalizedEmail = email.trim().toLowerCase();
-    if (await _userExists(normalizedEmail)) {
-      return false;
-    }
-
-    final user = UserProfile(
-      id: DateTime.now().microsecondsSinceEpoch.toString(),
-      name: name.trim(),
-      email: normalizedEmail,
-      passwordHash: _hashPassword(password),
-      preferences: preferences.trim(),
-      age: age,
-      favorites: '',
-      createdAt: DateTime.now(),
-    );
-
-    if (_db != null) {
-      await _db!.insert('users', user.toJson());
-    }
-
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('user_${user.email}', jsonEncode(user.toJson()));
-    await _persistSession(user);
-    currentUser = user;
-    return true;
-  }
-
-  Future<bool> updateProfile({
-    required String name,
-    required String email,
+    required String email, // Keep the parameter to avoid breaking ProfilePage
     required String preferences,
     int? age,
     String? favorites,
   }) async {
     if (currentUser == null) return false;
 
-    final normalizedEmail = email.trim().toLowerCase();
-    final conflictingUser = await _findUser(normalizedEmail);
-    if (conflictingUser != null && conflictingUser.id != currentUser!.id) {
-      return false;
-    }
-
     final updatedUser = UserProfile(
       id: currentUser!.id,
       name: name.trim(),
-      email: normalizedEmail,
+      email: currentUser!.email,
       passwordHash: currentUser!.passwordHash,
       preferences: preferences.trim(),
       age: age,
@@ -212,22 +174,48 @@ class AuthService {
     return true;
   }
 
-  Future<UserProfile?> signIn({
-    required String email,
-    required String password,
-  }) async {
-    final normalizedEmail = email.trim().toLowerCase();
-    final parsedUser = await _findUser(normalizedEmail);
-    if (parsedUser == null || _hashPassword(password) != parsedUser.passwordHash) {
-      return null;
-    }
+  Future<bool> loginWithAuth0() async {
+    try {
+      final credentials = await _auth0.webAuthentication().login();
+      final auth0User = credentials.user;
+      final normalizedEmail = auth0User.email?.trim().toLowerCase() ?? '';
 
-    await _persistSession(parsedUser);
-    currentUser = parsedUser;
-    return parsedUser;
+      var localUser = await _findUser(normalizedEmail);
+
+      if (localUser == null) {
+        localUser = UserProfile(
+          id: auth0User.sub,
+          name: auth0User.name ?? 'Novo Usuário',
+          email: normalizedEmail,
+          passwordHash: 'managed_by_auth0',
+          preferences: '',
+          favorites: '',
+          createdAt: DateTime.now(),
+        );
+
+        if (_db != null) {
+          await _db!.insert('users', localUser.toJson());
+        }
+        
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('user_$normalizedEmail', jsonEncode(localUser.toJson()));
+      }
+
+      await _persistSession(localUser);
+      currentUser = localUser;
+      return true;
+    } catch (e) {
+      if (kDebugMode) print('Auth0 Login Error: $e');
+      return false;
+    }
   }
 
   Future<void> signOut() async {
+    try {
+      await _auth0.webAuthentication().logout();
+    } catch (e) {
+      if (kDebugMode) print('Auth0 Logout Error: $e');
+    }
     currentUser = null;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_sessionKey);
@@ -240,17 +228,10 @@ class AuthService {
     currentUser = null;
   }
 
-  String _hashPassword(String password) {
-    final bytes = utf8.encode('petshop-salt-v1:$password');
-    return sha256.convert(bytes).toString();
-  }
-
   Future<void> _persistSession(UserProfile user) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_sessionKey, jsonEncode(user.toJson()));
   }
-
-  Future<bool> _userExists(String email) async => (await _findUser(email)) != null;
 
   Future<UserProfile?> _findUser(String email) async {
     if (_db != null) {

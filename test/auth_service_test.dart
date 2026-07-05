@@ -1,5 +1,6 @@
+import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pet_shop/core/services/auth_service.dart';
+import 'package:adopet/core/services/auth_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -10,55 +11,43 @@ void main() {
   });
 
   group('AuthService', () {
-    test('stores a salted password hash and validates it', () async {
-      final auth = AuthService.instance;
-      await auth.initialize();
-      await auth.clearForTests();
-
-      final created = await auth.signUp(
-        name: 'Ana',
-        email: 'ana@example.com',
-        password: 'supersecret',
-        preferences: 'gatos,brinquedos',
-        age: 28, // Passed as int
-      );
-
-      expect(created, isTrue);
-
-      final user = await auth.signIn(
-        email: 'ana@example.com',
-        password: 'supersecret',
-      );
-
-      expect(user, isNotNull);
-      expect(user!.name, 'Ana');
-      expect(user.preferences, contains('gatos'));
-      expect(user.age, 28); // Expect int
-    });
-
     test('updates the current user profile preferences', () async {
       final auth = AuthService.instance;
-      await auth.initialize();
-      await auth.clearForTests();
-
-      await auth.signUp(
+      
+      // Simulate an existing Auth0 session being loaded from SharedPreferences
+      final mockUser = UserProfile(
+        id: 'auth0|123456789',
         name: 'Ana',
         email: 'ana@example.com',
-        password: 'supersecret',
+        passwordHash: 'managed_by_auth0',
         preferences: 'dog',
-        age: 31, // Passed as int
+        age: 31,
+        favorites: '',
+        createdAt: DateTime.now(),
       );
+      
+      SharedPreferences.setMockInitialValues({
+        'auth_session': jsonEncode(mockUser.toJson()),
+      });
 
+      await auth.initialize();
+      
+      // Verify the session was loaded correctly
+      expect(auth.currentUser, isNotNull);
+
+      // Test the updateProfile method
       final updated = await auth.updateProfile(
-        name: 'Ana',
+        name: 'Ana Silva',
         email: 'ana@example.com',
         preferences: 'dog,cat',
-        age: 32, // Passed as int
+        age: 32,
       );
 
+      // Verify the updates were applied
       expect(updated, isTrue);
+      expect(auth.currentUser?.name, 'Ana Silva');
       expect(auth.currentUser?.preferences, 'dog,cat');
-      expect(auth.currentUser?.age, 32); // Expect int
+      expect(auth.currentUser?.age, 32);
     });
   });
 }
