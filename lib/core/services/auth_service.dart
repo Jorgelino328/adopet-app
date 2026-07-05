@@ -176,7 +176,7 @@ Future<bool> updateProfile({
 
   Future<bool> loginWithAuth0() async {
     try {
-      final credentials = await _auth0.webAuthentication().login();
+      final credentials = await _auth0.webAuthentication().login(useHTTPS: true);
       final auth0User = credentials.user;
       final normalizedEmail = auth0User.email?.trim().toLowerCase() ?? '';
 
@@ -212,7 +212,7 @@ Future<bool> updateProfile({
 
   Future<void> signOut() async {
     try {
-      await _auth0.webAuthentication().logout();
+      await _auth0.webAuthentication().logout(useHTTPS: true);
     } catch (e) {
       if (kDebugMode) print('Auth0 Logout Error: $e');
     }
