@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:auth0_flutter/auth0_flutter.dart';
+import 'package:auth0_flutter/auth0_flutter_web.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -94,11 +95,17 @@ class AuthService {
 
   Database? _db;
   UserProfile? currentUser;
-  late Auth0 _auth0;
+  
+  Auth0? _auth0;
+  Auth0Web? _auth0Web;
 
   Future<void> initialize() async {
-    _auth0 = Auth0('dev-jzwhcfe325islwqz.us.auth0.com', 'O8SiIN38jquZ3FWghtWzSE676DwQ7EAb');
-    if (!kIsWeb) {
+    if (kIsWeb) {
+      _auth0Web = Auth0Web('dev-jzwhcfe325islwqz.us.auth0.com', 'O8SiIN38jquZ3FWghtWzSE676DwQ7EAb');
+      await _auth0Web?.onLoad(); // Required for Web
+    } else {
+      _auth0 = Auth0('dev-jzwhcfe325islwqz.us.auth0.com', 'O8SiIN38jquZ3FWghtWzSE676DwQ7EAb');
+      
       if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
         sqfliteFfiInit();
         databaseFactory = databaseFactoryFfi;
@@ -176,7 +183,14 @@ Future<bool> updateProfile({
 
   Future<bool> loginWithAuth0() async {
     try {
-      final credentials = await _auth0.webAuthentication().login(useHTTPS: true);
+      Credentials credentials;
+
+      if (kIsWeb) {
+        credentials = await _auth0Web!.loginWithPopup();
+      } else {
+        credentials = await _auth0!.webAuthentication().login();
+      }
+
       final auth0User = credentials.user;
       final normalizedEmail = auth0User.email?.trim().toLowerCase() ?? '';
 
@@ -212,10 +226,15 @@ Future<bool> updateProfile({
 
   Future<void> signOut() async {
     try {
-      await _auth0.webAuthentication().logout(useHTTPS: true);
+      if (kIsWeb) {
+        await _auth0Web!.logout();
+      } else {
+        await _auth0!.webAuthentication().logout();
+      }
     } catch (e) {
       if (kDebugMode) print('Auth0 Logout Error: $e');
     }
+    
     currentUser = null;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_sessionKey);
