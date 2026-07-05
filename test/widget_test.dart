@@ -12,7 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:adopet/app.dart';
 
 void main() {
-  testWidgets('pet shop renders the auth screen', (WidgetTester tester) async {
+  testWidgets('adopet renders the auth screen', (WidgetTester tester) async {
     SharedPreferences.setMockInitialValues({});
     await tester.pumpWidget(const AdopetApp());
     for (var i = 0; i < 5; i++) {

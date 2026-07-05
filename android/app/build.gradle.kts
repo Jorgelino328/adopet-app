@@ -19,7 +19,7 @@ android {
         jvmTarget = JavaVersion.VERSION_17.toString()
     }
 
-    defaultConfig {
+defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.example.adopet"
         // You can update the following values to match your application needs.
@@ -28,6 +28,10 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        
+        // ADD THESE TWO LINES HERE:
+        manifestPlaceholders["auth0Domain"] = "dev-jzwhcfe325islwqz.us.auth0.com"
+        manifestPlaceholders["auth0Scheme"] = "app"
     }
 
     buildTypes {

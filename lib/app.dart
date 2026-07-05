@@ -36,7 +36,7 @@ class _AdopetAppState extends State<AdopetApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Pet Shop',
+      title: 'Adopet',
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(),
       home: _isReady

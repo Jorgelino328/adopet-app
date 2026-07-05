@@ -6,7 +6,7 @@ Aplicativo de adoção de animais desenvolvido com Flutter.
 
 1. Entre na pasta do projeto:
    ```bash
-   cd /home/jorgelino/pet-shop
+   cd /home/jorgelino/adopet
    ```
 
 2. Habilite o suporte para web, se ainda não estiver ativado:
