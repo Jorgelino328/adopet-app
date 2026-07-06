@@ -23,7 +23,7 @@ class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin, Addr
 
   List<PetItem> _pets = [];
   List<PetItem> _filteredPets = [];
-  List<String> _adoptedPetNames = [];
+  List<String> _adoptedPetIds = [];
   bool _isLoading = false;
   String _searchText = '';
   
@@ -76,10 +76,11 @@ class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin, Addr
     super.dispose();
   }
 
+
   Future<void> _loadAdoptedPets() async {
     final submissions = await _persistence.loadSubmissions();
     setState(() {
-      _adoptedPetNames = submissions.map((s) => s['petPreference'] as String).toList();
+      _adoptedPetIds = submissions.map((s) => s['petId'] as String).toList();
     });
   }
 
@@ -94,6 +95,25 @@ class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin, Addr
       _isLoading = false;
     });
   }
+
+  void _refreshAndScroll() {
+    setState(() {
+      _filteredPets = _applyFilters(_pets);
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          0.0,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+
+
 
   List<PetItem> _applyFilters(List<PetItem> source) {
     final normalizedQuery = _searchText.trim().toLowerCase();
@@ -130,10 +150,8 @@ class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin, Addr
   }
 
   void _onSearchChanged(String value) {
-    setState(() {
-      _searchText = value;
-      _filteredPets = _applyFilters(_pets);
-    });
+    setState(() => _searchText = value);
+    _refreshAndScroll();
   }
 
   void _toggleFilter(String type) {
@@ -143,8 +161,8 @@ class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin, Addr
       } else {
         _selectedFilters.add(type);
       }
-      _filteredPets = _applyFilters(_pets);
     });
+    _refreshAndScroll();
   }
 
   Future<void> _toggleFavorite(PetItem pet) async {
@@ -178,13 +196,14 @@ class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin, Addr
     });
   }
 
-  void _openAdoptionForm(PetItem pet) {
-    Navigator.push(
+  void _openAdoptionForm(PetItem pet) async {
+    await Navigator.push(
       context,
       MaterialPageRoute<void>(
         builder: (context) => AdoptionFormPage(selectedPet: pet),
       ),
     );
+    await _loadAdoptedPets();
   }
 
   @override
@@ -233,22 +252,31 @@ class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin, Addr
                             }
                             setState(() {
                               _showOnlyFavorites = !_showOnlyFavorites;
-                              _filteredPets = _applyFilters(_pets);
                             });
+                            _refreshAndScroll();
                           },
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                _showOnlyFavorites ? Icons.favorite : Icons.favorite_border,
-                                color: _showOnlyFavorites ? Colors.red : Colors.grey,
-                                size: 24,
-                              ),
-                              const Text(
-                                'Favoritos',
-                                style: TextStyle(fontSize: 10),
-                              ),
-                            ],
+                          
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.grey.shade300),
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  _showOnlyFavorites ? Icons.favorite : Icons.favorite_border,
+                                  color: _showOnlyFavorites ? Colors.red : Colors.grey,
+                                  size: 24,
+                                ),
+                                const Text(
+                                  'Favoritos',
+                                  style: TextStyle(fontSize: 10),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ],
@@ -264,9 +292,9 @@ class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin, Addr
                             key: Key('state_${states.length}_$selectedState'),
                             isExpanded: true,
                             decoration: const InputDecoration(labelText: 'UF', border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14)),
-                            hint: Text(selectedState ?? 'UF'),
+                            hint: Text(selectedState ?? '--'),
                             items: [
-                              const DropdownMenuItem<String>(value: null, child: Text('UF')),
+                              const DropdownMenuItem<String>(value: null, child: Text('--')),
                               ...states.map((s) => s['sigla'] as String).toSet().map((sigla) => DropdownMenuItem(value: sigla, child: Text(sigla))),
                             ],
                             onChanged: (val) {
@@ -280,6 +308,7 @@ class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin, Addr
                                   cities = [];
                                 }
                               });
+                              _refreshAndScroll();
                             },
                           ),
                         ),
@@ -289,16 +318,16 @@ class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin, Addr
                             key: Key('city_${cities.length}_$selectedCity'),
                             isExpanded: true,
                             decoration: const InputDecoration(labelText: 'Cidade', border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14)),
-                            hint: Text(selectedCity ?? 'Cidade'),
+                            hint: Text(selectedCity ?? '---'),
                             items: [
-                              const DropdownMenuItem<String>(value: null, child: Text('Cidade')),
+                              const DropdownMenuItem<String>(value: null, child: Text('---')),
                               ...cities.map((c) => c['nome'] as String).toSet().map((nome) => DropdownMenuItem(value: nome, child: Text(nome))),
                             ],
                             onChanged: (val) {
                               setState(() {
                                 selectedCity = val;
-                                _filteredPets = _applyFilters(_pets);
                               });
+                              _refreshAndScroll();
                             },
                           ),
                         ),
@@ -374,8 +403,8 @@ class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin, Addr
                           pet: pet,
                           isFavorite: favoriteIds.contains(pet.id),
                           onFavoritePressed: () => _toggleFavorite(pet),
-                          onAdoptPressed: _adoptedPetNames.contains(pet.name)
-                              ? () {} 
+                          onAdoptPressed: _adoptedPetIds.contains(pet.id)
+                              ? null
                               : () => _openAdoptionForm(pet),
                         ),
                       );

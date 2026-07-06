@@ -30,7 +30,6 @@ class PetDetailsPage extends StatelessWidget {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
                 ),
-                // This is the "card" color
                 color: Colors.white, 
                 child: Padding(
                   padding: const EdgeInsets.all(24),

@@ -14,7 +14,7 @@ class PetCard extends StatelessWidget {
   final PetItem pet;
   final bool isFavorite;
   final VoidCallback onFavoritePressed;
-  final VoidCallback onAdoptPressed;
+  final VoidCallback? onAdoptPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -89,7 +89,7 @@ class PetCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   FilledButton.icon(
-                    onPressed: onAdoptPressed,
+                    onPressed: onAdoptPressed, 
                     icon: const Icon(Icons.pets),
                     label: const Text('Quero adotar'),
                   ),
