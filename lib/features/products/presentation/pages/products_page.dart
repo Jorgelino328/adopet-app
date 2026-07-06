@@ -1,3 +1,4 @@
+import 'package:adopet/core/services/persistence_service.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../../adoption/presentation/pages/adoption_form_page.dart';
@@ -18,9 +19,11 @@ class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin, Addr
   final PetApiService _apiService = PetApiService();
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
+  final PersistenceService _persistence = PersistenceService();
 
   List<PetItem> _pets = [];
   List<PetItem> _filteredPets = [];
+  List<String> _adoptedPetNames = [];
   bool _isLoading = false;
   String _searchText = '';
   
@@ -32,6 +35,8 @@ class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin, Addr
   void initState() {
     super.initState();
 
+    _loadAdoptedPets();
+    
     WidgetsBinding.instance.addPostFrameCallback((_) {
       checkAndShowSetupDialog(); 
     });
@@ -69,6 +74,13 @@ class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin, Addr
     _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadAdoptedPets() async {
+    final submissions = await _persistence.loadSubmissions();
+    setState(() {
+      _adoptedPetNames = submissions.map((s) => s['petPreference'] as String).toList();
+    });
   }
 
   Future<void> _loadPets() async {
@@ -350,7 +362,7 @@ class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin, Addr
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
                 sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate(
+                  delegate: SliverChildBuilderDelegate( 
                     (context, index) {
                       final pet = _filteredPets[index];
                       return InkWell(
@@ -362,7 +374,9 @@ class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin, Addr
                           pet: pet,
                           isFavorite: favoriteIds.contains(pet.id),
                           onFavoritePressed: () => _toggleFavorite(pet),
-                          onAdoptPressed: () => _openAdoptionForm(pet),
+                          onAdoptPressed: _adoptedPetNames.contains(pet.name)
+                              ? () {} 
+                              : () => _openAdoptionForm(pet),
                         ),
                       );
                     },

@@ -45,6 +45,16 @@ class _AdoptionFormPageState extends State<AdoptionFormPage> {
       return;
     }
 
+    final existingSubmissions = await _persistence.loadSubmissions();
+    final alreadyAdopted = existingSubmissions.any((s) => s['petId'] == widget.selectedPet?.id);
+
+    if (alreadyAdopted) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Você já solicitou a adoção deste pet!')),
+      );
+      return;
+    }
     if (currentUser.dob == null || currentUser.contactNumber == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Complete seu perfil (data de nascimento e telefone) para adotar.')),
@@ -64,7 +74,7 @@ class _AdoptionFormPageState extends State<AdoptionFormPage> {
       'email': currentUser.email,
       'dob': currentUser.dob,
       'contactNumber': currentUser.contactNumber,
-      'petPreference': _petPreference ?? 'Preferência não informada',
+      'petId': widget.selectedPet?.id ?? 'desconhecido',
       'note': _noteController.text.trim(),
       'timestamp': DateTime.now().toIso8601String(),
     };
