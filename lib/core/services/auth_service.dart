@@ -214,6 +214,9 @@ class AuthService {
 
     if (_db != null) {
       await _db!.update('users', updatedUser.toJson(), where: 'id = ?', whereArgs: [updatedUser.id]);
+    } else {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('user_${updatedUser.id}', jsonEncode(updatedUser.toJson()));
     }
 
     await _persistSession(updatedUser);
@@ -331,6 +334,12 @@ class AuthService {
     if (_db != null) {
       final rows = await _db!.query('users', where: 'id = ?', whereArgs: [auth0Id], limit: 1);
       if (rows.isNotEmpty) return UserProfile.fromJson(rows.first.cast<String, dynamic>());
+    } else {
+      final prefs = await SharedPreferences.getInstance();
+      final userData = prefs.getString('user_$auth0Id');
+      if (userData != null) {
+        return UserProfile.fromJson(jsonDecode(userData) as Map<String, dynamic>);
+      }
     }
     return null;
   }
