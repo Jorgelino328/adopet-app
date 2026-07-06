@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../data/pet_service.dart';
+import '../../../pets/models/pet_item.dart';
+import '../../../profile/models/user_profile.dart';
 
 class PetCard extends StatelessWidget {
   const PetCard({

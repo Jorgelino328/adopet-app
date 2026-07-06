@@ -3,6 +3,7 @@ import '../../models/pet_item.dart';
 import '../../data/pet_service.dart';
 import '../../../../core/services/persistence_service.dart';
 import '../../../../core/services/auth_service.dart';
+import '../../../profile/models/user_profile.dart';
 
 class PetsProvider extends ChangeNotifier {
   final PetApiService _apiService = PetApiService();
@@ -25,11 +26,7 @@ class PetsProvider extends ChangeNotifier {
 
     try {
       final submissions = await _persistence.loadSubmissions();
-      adoptedPetIds = submissions
-          .map((s) => s['petId']?.toString() ?? '')
-          .where((id) => id.isNotEmpty)
-          .toList();
-
+      adoptedPetIds = submissions.map((s) => s.petId).toList();
       pets = await _apiService.fetchPets(page: 1, pageSize: 100);
       
       final user = AuthService.instance.currentUser;
@@ -139,10 +136,7 @@ class PetsProvider extends ChangeNotifier {
   Future<void> refreshAdoptedPets() async {
     try {
       final submissions = await _persistence.loadSubmissions();
-      adoptedPetIds = submissions
-          .map((s) => s['petId']?.toString() ?? '')
-          .where((id) => id.isNotEmpty)
-          .toList();
+      adoptedPetIds = submissions.map((s) => s.petId).toList();
       applyFilters();
     } catch (e) {
       debugPrint("Error loading adopted pets: $e");

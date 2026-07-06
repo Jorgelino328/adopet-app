@@ -2,6 +2,7 @@ import 'package:adopet/core/mixins/address_mixin.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/services/auth_service.dart';
+import '../../../profile/models/user_profile.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key, this.onSignedOut});

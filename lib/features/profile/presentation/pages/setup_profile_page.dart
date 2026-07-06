@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../../../core/mixins/address_mixin.dart'; 
+import '../../../profile/models/user_profile.dart';
 
 class SetupProfilePage extends StatefulWidget {
   const SetupProfilePage({super.key});

@@ -10,6 +10,7 @@ import '../../../../core/mixins/address_mixin.dart';
 import 'package:adopet/features/pets/presentation/pages/pet_details_page.dart';
 import '../../models/pet_item.dart';
 import '../providers/pets_provider.dart';
+import 'package:adopet/features/profile/models/user_profile.dart';
 
 class PetsPage extends StatefulWidget {
   const PetsPage({super.key});
