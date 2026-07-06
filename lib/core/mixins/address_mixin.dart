@@ -25,7 +25,6 @@ mixin AddressMixin<T extends StatefulWidget> on State<T> {
       return TextEditingValue(text: newText, selection: TextSelection.collapsed(offset: newText.length));
     });
 
-  // CEP Mask
   final cepFormatter = TextInputFormatter.withFunction((oldValue, newValue) {
     final text = newValue.text.replaceAll(RegExp(r'\D'), '');
     String newText = '';

@@ -195,7 +195,14 @@ class _ProfilePageState extends State<ProfilePage> with AddressMixin{
           TextButton.icon(
             onPressed: _signOut,
             icon: const Icon(Icons.logout_outlined),
-            label: const Text('Sair'),
+            label: const Text(
+              'Sair',
+              style: TextStyle( 
+                fontSize: 16.0,
+                fontWeight: FontWeight.w400,
+                color: Color(0xFFC64600)
+                ),
+              ),
           ),
         ],
       ),

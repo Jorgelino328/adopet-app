@@ -89,8 +89,8 @@ class _AdopetShellState extends State<AdopetShell> {
             label: 'Início',
           ),
           NavigationDestination(
-            icon: Icon(Icons.pets_outlined),
-            selectedIcon: Icon(Icons.pets),
+            icon: Icon(Icons.pets),
+            selectedIcon: Icon(Icons.pets, color: Color(0xFFC64600)),
             label: 'Pets',
           ),
           NavigationDestination(
