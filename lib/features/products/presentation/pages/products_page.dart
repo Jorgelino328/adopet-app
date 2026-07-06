@@ -35,7 +35,7 @@ class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin, Addr
   void initState() {
     super.initState();
 
-    _loadAdoptedPets();
+    _initializePageData();
     
     WidgetsBinding.instance.addPostFrameCallback((_) {
       checkAndShowSetupDialog(); 
@@ -76,20 +76,31 @@ class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin, Addr
     super.dispose();
   }
 
-
-Future<void> _loadAdoptedPets() async {
-  final submissions = await _persistence.loadSubmissions();
-  
-  setState(() {
-    _adoptedPetIds = submissions.map((s) => s['petId'] as String).toList();
-  });
-  
-  if (_pets.isNotEmpty) {
-    setState(() {
-      _filteredPets = _applyFilters(_pets);
-    });
+  Future<void> _initializePageData() async {
+    await _loadAdoptedPets();
+    await _loadPets();
   }
-}
+
+  Future<void> _loadAdoptedPets() async {
+    try {
+      final submissions = await _persistence.loadSubmissions();
+      
+      setState(() {
+        _adoptedPetIds = submissions
+            .map((s) => s['petId']?.toString() ?? '')
+            .where((id) => id.isNotEmpty)
+            .toList();
+      });
+      
+      if (_pets.isNotEmpty) {
+        setState(() {
+          _filteredPets = _applyFilters(_pets);
+        });
+      }
+    } catch (e) {
+      debugPrint("Error loading adopted pets: $e");
+    }
+  }
 
   Future<void> _loadPets() async {
     setState(() => _isLoading = true);
