@@ -175,17 +175,6 @@ class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin, Addr
     );
   }
 
-  Widget _buildPetTypeChip(String type) {
-    final isSelected = _selectedFilters.contains(type);
-    return FilterChip(
-      labelStyle: const TextStyle(fontSize: 12),
-      padding: EdgeInsets.zero,
-      label: Center(child: Text(UserProfile.labelForPreference(type))),
-      selected: isSelected,
-      onSelected: (_) => _toggleFilter(type),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final currentUser = AuthService.instance.currentUser;
@@ -273,7 +262,11 @@ class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin, Addr
                                 selectedState = val;
                                 selectedCity = null;
                                 _filteredPets = _applyFilters(_pets);
-                                if (val != null) fetchCities(val); else cities = [];
+                                if (val != null) {
+                                  fetchCities(val);
+                                } else {
+                                  cities = [];
+                                }
                               });
                             },
                           ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../products/presentation/pages/products_page.dart';
 import '../../../../core/mixins/setup_dialogue_mixin.dart';
+import '../../../../core/services/persistence_service.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -11,12 +12,21 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> with SetupDialogMixin {
   List<Map<String, dynamic>> _submissions = [];
+  final PersistenceService _persistence = PersistenceService();
 
   @override
   void initState() {
     super.initState();
+    _loadData();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       checkAndShowSetupDialog();
+    });
+  }
+
+  Future<void> _loadData() async {
+    final data = await _persistence.loadSubmissions();
+    setState(() {
+      _submissions = data;
     });
   }
 
