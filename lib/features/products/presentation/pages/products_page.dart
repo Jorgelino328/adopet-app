@@ -28,9 +28,8 @@ class _ProductsPageState extends State<ProductsPage> {
   void initState() {
     super.initState();
     
-    // Pre-select user preferences
     final user = AuthService.instance.currentUser;
-    if (user != null && user.preferences.isNotEmpty) {
+    if (user != null && (user.preferences?.isNotEmpty ?? false)) {
       _selectedFilters.addAll(
         UserProfile.parsePreferenceSelections(user.preferences),
       );
@@ -114,7 +113,6 @@ class _ProductsPageState extends State<ProductsPage> {
 
     await AuthService.instance.updateProfile(
       name: user.name,
-      email: user.email,
       preferences: user.preferences,
       favorites: UserProfile.serializePreferenceSelections(favs),
     );

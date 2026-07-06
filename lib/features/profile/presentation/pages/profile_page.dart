@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
-
+import 'package:intl/intl.dart';
 import '../../../../core/services/auth_service.dart';
-import '../../../auth/presentation/pages/auth_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key, this.onSignedOut});
-
   final VoidCallback? onSignedOut;
 
   @override
@@ -15,8 +13,13 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   final _authService = AuthService.instance;
   final _nameController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _ageController = TextEditingController();
+  final _dobController = TextEditingController();
+  final _contactController = TextEditingController();
+  final _cepController = TextEditingController();
+  final _cityController = TextEditingController();
+  final _stateController = TextEditingController();
+  
+  DateTime? _selectedDate;
   final Set<String> _selectedWantedPets = <String>{};
 
   bool _isSaving = false;
@@ -29,80 +32,80 @@ class _ProfilePageState extends State<ProfilePage> {
     _syncFromUser();
   }
 
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _emailController.dispose();
-    _ageController.dispose();
-    super.dispose();
-  }
-
   void _syncFromUser() {
     final user = _authService.currentUser;
-    if (user == null) {
-      return;
-    }
+    if (user == null) return;
 
     _nameController.text = user.name;
-    _emailController.text = user.email;
-    _ageController.text = user.age?.toString() ?? '';
+    _contactController.text = user.contactNumber ?? '';
+    _cepController.text = user.cep ?? '';
+    _cityController.text = user.city ?? '';
+    _stateController.text = user.state ?? '';
+    
+    if (user.dob != null) {
+      _selectedDate = DateTime.tryParse(user.dob!);
+      _dobController.text = _selectedDate != null 
+          ? DateFormat('dd/MM/yyyy').format(_selectedDate!) 
+          : '';
+    }
 
     _selectedWantedPets
       ..clear()
-      ..addAll(UserProfile.parsePreferenceSelections(user.preferences));
+      ..addAll(UserProfile.parsePreferenceSelections(user.preferences ?? ''));
+  }
+
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate ?? DateTime(2000),
+      firstDate: DateTime(1900),
+      lastDate: DateTime.now(),
+    );
+    if (picked != null) {
+      setState(() {
+        _selectedDate = picked;
+        _dobController.text = DateFormat('dd/MM/yyyy').format(picked);
+      });
+    }
   }
 
   Future<void> _saveProfile() async {
     final user = _authService.currentUser;
-    if (user == null) {
-      return;
-    }
+    if (user == null) return;
 
-    setState(() {
-      _isSaving = true;
-      _message = null;
-    });
+    setState(() => _isSaving = true);
 
     final success = await _authService.updateProfile(
       name: _nameController.text,
-      email: _emailController.text,
-      preferences: UserProfile.serializePreferenceSelections(
-        _selectedWantedPets.toList(),
-      ),
-      age: int.tryParse(_ageController.text),
+      dob: _selectedDate?.toIso8601String().split('T')[0],
+      contactNumber: _contactController.text,
+      cep: _cepController.text,
+      city: _cityController.text,
+      state: _stateController.text,
+      preferences: UserProfile.serializePreferenceSelections(_selectedWantedPets.toList()),
     );
 
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
 
     setState(() {
       _isSaving = false;
-      _message = success
-          ? 'Perfil atualizado com sucesso.'
-          : 'Não foi possível atualizar o perfil.';
+      _isEditing = false;
+      _message = success ? 'Perfil atualizado com sucesso.' : 'Erro ao atualizar.';
     });
+  }
+
+  Future<void> _handleLogin() async {
+    final success = await _authService.loginWithAuth0();
+    
+    if (!mounted) return;
 
     if (success) {
       _syncFromUser();
-      setState(() => _isEditing = false);
-    }
-  }
-
-  Future<void> _openAuthPage() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (context) => AuthPage(
-          onAuthenticated: () {
-            Navigator.of(context).pop();
-            widget.onSignedOut?.call();
-            setState(() {});
-          },
-        ),
-      ),
-    );
-    if (mounted) {
       setState(() {});
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Login cancelado ou falhou.')),
+      );
     }
   }
 
@@ -146,7 +149,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                     const SizedBox(height: 16),
                     FilledButton.icon(
-                      onPressed: _openAuthPage,
+                      onPressed: _handleLogin,
                       icon: const Icon(Icons.login_outlined),
                       label: const Text('Entrar ou criar conta'),
                     ),
@@ -194,14 +197,16 @@ class _ProfilePageState extends State<ProfilePage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(user.email),
-                        if (user.age != null) Text('Idade: ${user.age} anos'),
+                        if (user.dob != null) Text('Nascimento: ${DateFormat('dd/MM/yyyy').format(DateTime.parse(user.dob!))}'),
+                        if (user.contactNumber != null && user.contactNumber!.isNotEmpty) Text('Telefone: ${user.contactNumber}'),
+                        if (user.city != null && user.state != null) Text('Localização: ${user.city}/${user.state}'),
                       ],
                     ),
                   ),
                   const SizedBox(height: 8),
-                  if (user.preferences.isNotEmpty) ...[
+                  if (user.preferences?.isNotEmpty ?? false) ...[
                     Text(
-                      'Você quer:',
+                      'Preferências:',
                       style: Theme.of(context).textTheme.titleSmall,
                     ),
                     const SizedBox(height: 6),
@@ -209,7 +214,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       spacing: 8,
                       runSpacing: 8,
                       children:
-                          UserProfile.parsePreferenceSelections(user.preferences)
+                          UserProfile.parsePreferenceSelections(user.preferences!)
                               .map(
                                 (option) => Chip(
                                   label: Text(
@@ -238,37 +243,26 @@ class _ProfilePageState extends State<ProfilePage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Editar perfil',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    Text('Editar perfil', style: Theme.of(context).textTheme.titleMedium),
                     const SizedBox(height: 16),
-                    TextField(
-                      controller: _nameController,
-                      decoration: const InputDecoration(labelText: 'Nome'),
-                    ),
+                    TextField(controller: _nameController, decoration: const InputDecoration(labelText: 'Nome')),
                     const SizedBox(height: 12),
                     TextField(
-                      controller: _emailController,
+                      controller: _dobController,
                       readOnly: true,
-                      decoration: const InputDecoration(labelText: 'E-mail'),
+                      decoration: const InputDecoration(labelText: 'Data de Nascimento', suffixIcon: Icon(Icons.calendar_today)),
+                      onTap: _pickDate,
                     ),
                     const SizedBox(height: 12),
-                    TextField(
-                      controller: _ageController,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Idade (opcional)',
-                      ),
-                    ),
+                    TextField(controller: _contactController, decoration: const InputDecoration(labelText: 'Telefone')),
                     const SizedBox(height: 12),
-                    Text(
-                      'Que tipo de pet você quer?',
-                      style: Theme.of(context).textTheme.titleSmall,
-                    ),
-                    const SizedBox(height: 8),
+                    TextField(controller: _cepController, decoration: const InputDecoration(labelText: 'CEP')),
+                    const SizedBox(height: 12),
+                    TextField(controller: _cityController, decoration: const InputDecoration(labelText: 'Cidade')),
+                    const SizedBox(height: 12),
+                    TextField(controller: _stateController, decoration: const InputDecoration(labelText: 'Estado')),
+                    const SizedBox(height: 12),
+                    Text('Que tipo de pet você quer?', style: Theme.of(context).textTheme.titleSmall),
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
