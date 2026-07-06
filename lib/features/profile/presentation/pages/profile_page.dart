@@ -1,3 +1,4 @@
+import 'package:adopet/core/mixins/address_mixin.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/services/auth_service.dart';
@@ -10,14 +11,11 @@ class ProfilePage extends StatefulWidget {
   State<ProfilePage> createState() => _ProfilePageState();
 }
 
-class _ProfilePageState extends State<ProfilePage> {
+class _ProfilePageState extends State<ProfilePage> with AddressMixin{
   final _authService = AuthService.instance;
   final _nameController = TextEditingController();
   final _dobController = TextEditingController();
   final _contactController = TextEditingController();
-  final _cepController = TextEditingController();
-  final _cityController = TextEditingController();
-  final _stateController = TextEditingController();
   
   DateTime? _selectedDate;
   final Set<String> _selectedWantedPets = <String>{};
@@ -29,30 +27,26 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   void initState() {
     super.initState();
-    _syncFromUser();
+    fetchStates(); // From mixin
   }
-
+  
   void _syncFromUser() {
     final user = _authService.currentUser;
     if (user == null) return;
 
     _nameController.text = user.name;
     _contactController.text = user.contactNumber ?? '';
-    _cepController.text = user.cep ?? '';
-    _cityController.text = user.city ?? '';
-    _stateController.text = user.state ?? '';
     
-    if (user.dob != null) {
-      _selectedDate = DateTime.tryParse(user.dob!);
-      _dobController.text = _selectedDate != null 
-          ? DateFormat('dd/MM/yyyy').format(_selectedDate!) 
-          : '';
-    }
+    cepController.text = user.cep ?? '';
+    selectedState = user.state;
+    selectedCity = user.city;
+    
+    if (selectedState != null) fetchCities(selectedState!);
 
-    _selectedWantedPets
-      ..clear()
-      ..addAll(UserProfile.parsePreferenceSelections(user.preferences ?? ''));
-  }
+      _selectedWantedPets
+        ..clear()
+        ..addAll(UserProfile.parsePreferenceSelections(user.preferences ?? ''));
+    }
 
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
@@ -79,13 +73,11 @@ class _ProfilePageState extends State<ProfilePage> {
       name: _nameController.text,
       dob: _selectedDate?.toIso8601String().split('T')[0],
       contactNumber: _contactController.text,
-      cep: _cepController.text,
-      city: _cityController.text,
-      state: _stateController.text,
+      cep: cepController.text, 
+      city: selectedCity,
+      state: selectedState,
       preferences: UserProfile.serializePreferenceSelections(_selectedWantedPets.toList()),
     );
-
-    if (!mounted) return;
 
     setState(() {
       _isSaving = false;
@@ -192,37 +184,30 @@ class _ProfilePageState extends State<ProfilePage> {
                   ListTile(
                     contentPadding: EdgeInsets.zero,
                     leading: const Icon(Icons.person_outline),
-                    title: Text(user.name),
+                    title: Text(user.name), // No '?' needed
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(user.email),
-                        if (user.dob != null) Text('Nascimento: ${DateFormat('dd/MM/yyyy').format(DateTime.parse(user.dob!))}'),
-                        if (user.contactNumber != null && user.contactNumber!.isNotEmpty) Text('Telefone: ${user.contactNumber}'),
-                        if (user.city != null && user.state != null) Text('Localização: ${user.city}/${user.state}'),
+                        Text(user.email), // No '?' needed
+                        if (user.dob != null)
+                          Text('Nascimento: ${DateFormat('dd/MM/yyyy').format(DateTime.parse(user.dob!))}'),
+                        if (user.contactNumber != null && user.contactNumber!.isNotEmpty)
+                          Text('Telefone: ${user.contactNumber}'),
+                        if (user.city != null && user.state != null)
+                          Text('Localização: ${user.city}/${user.state}'),
                       ],
                     ),
                   ),
                   const SizedBox(height: 8),
                   if (user.preferences?.isNotEmpty ?? false) ...[
-                    Text(
-                      'Preferências:',
-                      style: Theme.of(context).textTheme.titleSmall,
-                    ),
+                    Text('Preferências:', style: Theme.of(context).textTheme.titleSmall),
                     const SizedBox(height: 6),
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
-                      children:
-                          UserProfile.parsePreferenceSelections(user.preferences!)
-                              .map(
-                                (option) => Chip(
-                                  label: Text(
-                                    UserProfile.labelForPreference(option),
-                                  ),
-                                ),
-                              )
-                              .toList(),
+                      children: UserProfile.parsePreferenceSelections(user.preferences!)
+                          .map((option) => Chip(label: Text(UserProfile.labelForPreference(option))))
+                          .toList(),
                     ),
                   ],
                   const SizedBox(height: 12),
@@ -250,17 +235,51 @@ class _ProfilePageState extends State<ProfilePage> {
                     TextField(
                       controller: _dobController,
                       readOnly: true,
-                      decoration: const InputDecoration(labelText: 'Data de Nascimento', suffixIcon: Icon(Icons.calendar_today)),
+                      decoration: const InputDecoration(labelText: 'Data de Nascimento (opcional)', suffixIcon: Icon(Icons.calendar_today)),
                       onTap: _pickDate,
                     ),
                     const SizedBox(height: 12),
-                    TextField(controller: _contactController, decoration: const InputDecoration(labelText: 'Telefone')),
+                    TextField(
+                      controller: _contactController, 
+                      inputFormatters: [phoneFormatter],
+                      maxLength: 15,
+                      decoration: const InputDecoration(
+                        labelText: 'Telefone (opcional)',
+                        hintText: '(84) 99999-9999', 
+                        counterText: ''
+                        ),
+                      ),
                     const SizedBox(height: 12),
-                    TextField(controller: _cepController, decoration: const InputDecoration(labelText: 'CEP')),
+                    TextField(
+                      controller: cepController,
+                      inputFormatters: [cepFormatter],
+                      decoration: const InputDecoration(labelText: 'CEP (opcional)'),
+                      onChanged: (val) {
+                        if (val.length == 9) fetchAddressByCep(val);
+                      },
+                    ),
                     const SizedBox(height: 12),
-                    TextField(controller: _cityController, decoration: const InputDecoration(labelText: 'Cidade')),
+                    DropdownButtonFormField<String>(
+                      key: Key('state_${states.length}_$selectedState'),
+                      initialValue: selectedState,
+                      items: states.map((s) => DropdownMenuItem(value: s['sigla'] as String, child: Text(s['sigla']))).toList(),
+                      onChanged: (val) {
+                        setState(() {
+                          selectedState = val;
+                          selectedCity = null;
+                          fetchCities(val!);
+                        });
+                      },
+                      decoration: const InputDecoration(labelText: 'Estado (opcional)'),
+                    ),
                     const SizedBox(height: 12),
-                    TextField(controller: _stateController, decoration: const InputDecoration(labelText: 'Estado')),
+                    DropdownButtonFormField<String>(
+                      key: Key('city_${cities.length}_$selectedCity'),
+                      initialValue: selectedCity,
+                      items: cities.map((c) => DropdownMenuItem(value: c['nome'] as String, child: Text(c['nome']))).toList(),
+                      onChanged: (val) => setState(() => selectedCity = val),
+                      decoration: const InputDecoration(labelText: 'Cidade (opcional)'),
+                    ),
                     const SizedBox(height: 12),
                     Text('Que tipo de pet você quer?', style: Theme.of(context).textTheme.titleSmall),
                     Wrap(
@@ -273,11 +292,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           selected: isSelected,
                           onSelected: (selected) {
                             setState(() {
-                              if (selected) {
-                                _selectedWantedPets.add(option);
-                              } else {
-                                _selectedWantedPets.remove(option);
-                              }
+                              selected ? _selectedWantedPets.add(option) : _selectedWantedPets.remove(option);
                             });
                           },
                         );
@@ -285,14 +300,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                     const SizedBox(height: 16),
                     if (_message != null) ...[
-                      Text(
-                        _message!,
-                        style: TextStyle(
-                          color: _message!.contains('sucesso')
-                              ? Colors.green
-                              : Colors.redAccent,
-                        ),
-                      ),
+                      Text(_message!, style: TextStyle(color: _message!.contains('sucesso') ? Colors.green : Colors.redAccent)),
                       const SizedBox(height: 12),
                     ],
                     Row(
@@ -313,13 +321,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           child: FilledButton.icon(
                             onPressed: _isSaving ? null : _saveProfile,
                             icon: _isSaving
-                                ? const SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
+                                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
                                 : const Icon(Icons.save_outlined),
                             label: Text(_isSaving ? 'Salvando...' : 'Salvar'),
                           ),

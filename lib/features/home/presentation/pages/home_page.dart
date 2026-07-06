@@ -1,7 +1,8 @@
 import 'package:adopet/core/services/auth_service.dart';
-import 'package:adopet/features/adoption/presentation/pages/setup_profile_page.dart';
+import 'package:adopet/features/profile/presentation/pages/setup_profile_page.dart';
 import 'package:flutter/material.dart';
 import '../../../products/presentation/pages/products_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -17,17 +18,27 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final user = AuthService.instance.currentUser;
-      if (user != null && !user.isSetupComplete) {
-        _showSetupDialog();
-      }
+      _checkAndShowSetupDialog();
     });
+  }
+
+  Future<void> _checkAndShowSetupDialog() async {
+    final user = AuthService.instance.currentUser;
+    if (user == null || user.isSetupComplete) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    final bool alreadyShown = prefs.getBool('setup_dialog_shown_${user.id}') ?? false;
+
+    if (!alreadyShown) {
+      _showSetupDialog();
+      await prefs.setBool('setup_dialog_shown_${user.id}', true);
+    }
   }
 
   void _showSetupDialog() {
     showDialog(
       context: context,
-      barrierDismissible: false, // User must interact
+      barrierDismissible: false,
       builder: (context) => AlertDialog(
         title: const Text('Quase lá!'),
         content: const Text('Complete seu perfil para aproveitar todas as funcionalidades.'),
