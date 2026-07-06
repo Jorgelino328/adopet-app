@@ -1,10 +1,11 @@
-import 'package:adopet/features/products/presentation/pages/pet_details_page.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../../adoption/presentation/pages/adoption_form_page.dart';
 import '../../data/pet_service.dart';
 import '../widgets/pet_card.dart';
 import '../../../../core/mixins/setup_dialogue_mixin.dart';
+import '../../../../core/mixins/address_mixin.dart';
+import 'package:adopet/features/products/presentation/pages/pet_details_page.dart';
 
 class ProductsPage extends StatefulWidget {
   const ProductsPage({super.key});
@@ -13,7 +14,7 @@ class ProductsPage extends StatefulWidget {
   State<ProductsPage> createState() => _ProductsPageState();
 }
 
-class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin {
+class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin, AddressMixin {
   final PetApiService _apiService = PetApiService();
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
@@ -33,11 +34,29 @@ class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin {
       checkAndShowSetupDialog(); 
     });
     
+    fetchStates();
+
     final user = AuthService.instance.currentUser;
-    if (user != null && (user.preferences?.isNotEmpty ?? false)) {
-      _selectedFilters.addAll(
-        UserProfile.parsePreferenceSelections(user.preferences),
-      );
+    if (user != null) {
+      if (user.state != null) {
+        selectedState = user.state;
+        fetchCities(selectedState!).then((_) {
+          if (mounted && user.city != null) {
+            setState(() {
+              if (cities.any((c) => c['nome'] == user.city)) {
+                selectedCity = user.city;
+              }
+              _filteredPets = _applyFilters(_pets);
+            });
+          }
+        });
+      }
+
+      if (user.preferences?.isNotEmpty ?? false) {
+        _selectedFilters.addAll(
+          UserProfile.parsePreferenceSelections(user.preferences),
+        );
+      }
     }
 
     _loadPets();
@@ -71,12 +90,21 @@ class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin {
             pet.name,
             pet.breed,
             pet.description,
+            pet.location,
             UserProfile.labelForPreference(pet.type),
           ].join(' ').toLowerCase().contains(normalizedQuery);
       
       final matchesFilter = _selectedFilters.isEmpty || _selectedFilters.contains(pet.type);
 
-      return matchesSearch && matchesFilter;
+      bool matchesLocation = true;
+      if (selectedState != null && selectedCity != null) {
+        final expectedLocation = "$selectedCity, $selectedState".toLowerCase();
+        matchesLocation = pet.location.toLowerCase() == expectedLocation;
+      } else if (selectedState != null) {
+        matchesLocation = pet.location.toLowerCase().endsWith(selectedState!.toLowerCase());
+      }
+
+      return matchesSearch && matchesFilter && matchesLocation;
     }).toList();
   }
 
@@ -147,74 +175,174 @@ class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin {
       ),
       body: RefreshIndicator(
         onRefresh: _loadPets,
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextField(
-                    controller: _searchController,
-                    onChanged: _onSearchChanged,
-                    decoration: const InputDecoration(
-                      hintText: 'Buscar por nome, raça ou descrição',
-                      prefixIcon: Icon(Icons.search),
-                      border: OutlineInputBorder(),
+        child: CustomScrollView(
+          controller: _scrollController,
+          slivers: [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: _searchController,
+                      onChanged: _onSearchChanged,
+                      decoration: const InputDecoration(
+                        hintText: 'Buscar por nome ou raça',
+                        prefixIcon: Icon(Icons.search),
+                        border: OutlineInputBorder(),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Filtrar por tipo:',
-                    style: Theme.of(context).textTheme.titleSmall,
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: UserProfile.petPreferenceOptions.map((type) {
-                      final isSelected = _selectedFilters.contains(type);
-                      return FilterChip(
-                        label: Text(UserProfile.labelForPreference(type)),
-                        selected: isSelected,
-                        onSelected: (_) => _toggleFilter(type),
-                      );
-                    }).toList(),
-                  ),
-                ],
+                    const SizedBox(height: 12),
+                    
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(
+                          width: 90,
+                          child: DropdownButtonFormField<String>(
+                            key: Key('state_${states.length}_$selectedState'), 
+                            value: selectedState,
+                            isExpanded: true,
+                            decoration: const InputDecoration(
+                              labelText: 'UF',
+                              border: OutlineInputBorder(),
+                              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                            ),
+                            items: states.map((s) => DropdownMenuItem(
+                              value: s['sigla'] as String, 
+                              child: Text(s['sigla'])
+                            )).toList(),
+                            onChanged: (val) {
+                              setState(() {
+                                selectedState = val;
+                                selectedCity = null;
+                                _filteredPets = _applyFilters(_pets);
+                              });
+                              if (val != null) {
+                                fetchCities(val);
+                              }
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            key: Key('city_${cities.length}_$selectedCity'), 
+                            value: selectedCity,
+                            isExpanded: true,
+                            decoration: const InputDecoration(
+                              labelText: 'Cidade',
+                              border: OutlineInputBorder(),
+                              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                            ),
+                            items: cities.map((c) => DropdownMenuItem(
+                              value: c['nome'] as String, 
+                              child: Text(c['nome'])
+                            )).toList(),
+                            onChanged: (val) {
+                              setState(() {
+                                selectedCity = val;
+                                _filteredPets = _applyFilters(_pets);
+                              });
+                            },
+                          ),
+                        ),
+                        
+                        if (selectedState != null || selectedCity != null)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 4),
+                            child: IconButton(
+                              icon: const Icon(Icons.clear),
+                              color: Colors.grey[600],
+                              onPressed: () {
+                                setState(() {
+                                  selectedState = null;
+                                  selectedCity = null;
+                                  _filteredPets = _applyFilters(_pets);
+                                });
+                              },
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    Text(
+                      'Filtrar por tipo:',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: UserProfile.petPreferenceOptions.map((type) {
+                        final isSelected = _selectedFilters.contains(type);
+                        return FilterChip(
+                          label: Text(UserProfile.labelForPreference(type)),
+                          selected: isSelected,
+                          onSelected: (_) => _toggleFilter(type),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ),
               ),
             ),
-            Expanded(
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _filteredPets.isEmpty
-                  ? const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(24),
-                        child: Text('Nenhum pet corresponde à sua busca/filtro.'),
-                      ),
-                    )
-                  : ListView.builder(
-                      controller: _scrollController,
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-                      itemCount: _filteredPets.length,
-                      itemBuilder: (context, index) {
-                        final pet = _filteredPets[index];
-                        return InkWell(
-                          onTap: () => Navigator.push(
-                            context, 
-                            MaterialPageRoute(builder: (_) => PetDetailsPage(pet: pet))
-                          ),
-                          child: PetCard(
-                            pet: pet,
-                            isFavorite: favoriteIds.contains(pet.id),
-                            onFavoritePressed: () => _toggleFavorite(pet),
-                            onAdoptPressed: () => _openAdoptionForm(pet),
-                          ),
-                        );
-                      },
+            
+            if (_isLoading)
+              const SliverFillRemaining(
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (_filteredPets.isEmpty)
+              const SliverFillRemaining(
+                hasScrollBody: false,
+                child: Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.sentiment_very_dissatisfied, size: 64, color: Color(0xFF8E4C32)),
+                        SizedBox(height: 16),
+                        Text(
+                          'Nenhum pet encontrado! Por favor, ajuste seus filtros e tente novamente.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                        ),
+                      ],
                     ),
-            ),
+                  ),
+                ),
+              )
+            else
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final pet = _filteredPets[index];
+                      return InkWell(
+                        onTap: () => Navigator.push(
+                          context, 
+                          MaterialPageRoute(builder: (_) => PetDetailsPage(pet: pet))
+                        ),
+                        child: PetCard(
+                          pet: pet,
+                          isFavorite: favoriteIds.contains(pet.id),
+                          onFavoritePressed: () => _toggleFavorite(pet),
+                          onAdoptPressed: () => _openAdoptionForm(pet),
+                        ),
+                      );
+                    },
+                    childCount: _filteredPets.length,
+                  ),
+                ),
+              ),
           ],
         ),
       ),
