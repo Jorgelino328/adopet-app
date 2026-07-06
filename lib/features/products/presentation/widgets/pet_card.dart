@@ -70,8 +70,8 @@ class PetCard extends StatelessWidget {
                     ],
                   ),
                   Text(
-                    '${pet.breed} • ${pet.age}',
-                    style: Theme.of(context).textTheme.bodyMedium,
+                    '${pet.sex} • ${pet.breed} • ${pet.age}',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   Text(

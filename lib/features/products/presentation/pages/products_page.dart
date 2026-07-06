@@ -1,5 +1,5 @@
+import 'package:adopet/features/products/presentation/pages/pet_details_page.dart';
 import 'package:flutter/material.dart';
-
 import '../../../../core/services/auth_service.dart';
 import '../../../adoption/presentation/pages/adoption_form_page.dart';
 import '../../data/pet_service.dart';
@@ -200,11 +200,17 @@ class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin {
                       itemCount: _filteredPets.length,
                       itemBuilder: (context, index) {
                         final pet = _filteredPets[index];
-                        return PetCard(
-                          pet: pet,
-                          isFavorite: favoriteIds.contains(pet.id),
-                          onFavoritePressed: () => _toggleFavorite(pet),
-                          onAdoptPressed: () => _openAdoptionForm(pet),
+                        return InkWell(
+                          onTap: () => Navigator.push(
+                            context, 
+                            MaterialPageRoute(builder: (_) => PetDetailsPage(pet: pet))
+                          ),
+                          child: PetCard(
+                            pet: pet,
+                            isFavorite: favoriteIds.contains(pet.id),
+                            onFavoritePressed: () => _toggleFavorite(pet),
+                            onAdoptPressed: () => _openAdoptionForm(pet),
+                          ),
                         );
                       },
                     ),
