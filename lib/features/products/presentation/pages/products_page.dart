@@ -142,7 +142,9 @@ class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin {
         : [];
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Pets para adoção')),
+      appBar: AppBar(
+        title: const Text('Pets para adoção'),
+      ),
       body: RefreshIndicator(
         onRefresh: _loadPets,
         child: Column(
