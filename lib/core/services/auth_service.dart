@@ -221,6 +221,30 @@ class AuthService {
     return true;
   }
 
+  Future<bool> toggleFavorite(String petId) async {
+    if (currentUser == null) return false;
+
+    List<String> currentFavs = currentUser!.favorites
+            ?.split(',')
+            .map((e) => e.trim())
+            .where((e) => e.isNotEmpty)
+            .toList() ??
+        [];
+
+    if (currentFavs.contains(petId)) {
+      currentFavs.remove(petId);
+    } else {
+      currentFavs.add(petId);
+    }
+
+    final newFavoritesString = currentFavs.join(',');
+
+    return await updateProfile(
+      name: currentUser!.name,
+      favorites: newFavoritesString,
+    );
+  }
+
   Future<bool> loginWithAuth0() async {
     try {
       Credentials credentials;
@@ -237,9 +261,20 @@ class AuthService {
       var localUser = await _findUser(auth0User.sub);
 
       if (localUser == null) {
+
+        String nameFromEmail = normalizedEmail.contains('@') 
+            ? normalizedEmail.split('@')[0] 
+            : 'Novo Usuário';
+        
+        String displayName = auth0User.name?.trim() ?? '';
+        
+        if (displayName.isEmpty || displayName.toLowerCase() == normalizedEmail) {
+          displayName = nameFromEmail;
+        }
+
         localUser = UserProfile(
           id: auth0User.sub,
-          name: auth0User.name ?? 'Novo Usuário',
+          name: displayName,
           email: normalizedEmail,
           passwordHash: 'managed_by_auth0',
           preferences: '',

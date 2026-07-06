@@ -11,6 +11,7 @@ class SetupProfilePage extends StatefulWidget {
 }
 
 class _SetupProfilePageState extends State<SetupProfilePage> with AddressMixin {
+  final _nameController = TextEditingController();
   final _dobController = TextEditingController();
   final _contactController = TextEditingController();
   
@@ -21,6 +22,11 @@ class _SetupProfilePageState extends State<SetupProfilePage> with AddressMixin {
   void initState() {
     super.initState();
     fetchStates();
+    
+    final user = AuthService.instance.currentUser;
+    if (user != null) {
+      _nameController.text = user.name;
+    }
   }
 
   Future<void> _pickDate() async {
@@ -40,10 +46,17 @@ class _SetupProfilePageState extends State<SetupProfilePage> with AddressMixin {
   }
 
   Future<void> _completeSetup() async {
+    if (_nameController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('O campo Nome é obrigatório.')),
+      );
+      return;
+    }
+
     final user = AuthService.instance.currentUser;
     if (user != null) {
       await AuthService.instance.updateProfile(
-        name: user.name,
+        name: _nameController.text.trim(),
         dob: _selectedDate?.toIso8601String().split('T')[0],
         contactNumber: _contactController.text,
         cep: cepController.text,
@@ -51,8 +64,12 @@ class _SetupProfilePageState extends State<SetupProfilePage> with AddressMixin {
         state: selectedState,
         preferences: UserProfile.serializePreferenceSelections(_selectedPets.toList()),
       );
+      
       if (!mounted) return;
-      Navigator.of(context).pushReplacementNamed('/home');
+      
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
     }
   }
 
@@ -67,8 +84,6 @@ class _SetupProfilePageState extends State<SetupProfilePage> with AddressMixin {
             FocusScope.of(context).unfocus();
             if (Navigator.of(context).canPop()) {
               Navigator.of(context).pop();
-            } else {
-              Navigator.of(context).pushReplacementNamed('/home');
             }
           },
         ),
@@ -76,9 +91,16 @@ class _SetupProfilePageState extends State<SetupProfilePage> with AddressMixin {
       body: ListView(
         padding: const EdgeInsets.all(24),
         children: [
-          Text('Personalize seu perfil (opcional).',
+          Text('Personalize seu perfil.',
               style: Theme.of(context).textTheme.bodyLarge),
           const SizedBox(height: 20),
+          TextField(
+            controller: _nameController,
+            decoration: const InputDecoration(
+              labelText: 'Nome (obrigatório)', 
+            ),
+          ),
+          const SizedBox(height: 16),
           TextField(
             controller: _dobController,
             readOnly: true,

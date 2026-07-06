@@ -27,7 +27,8 @@ class _ProfilePageState extends State<ProfilePage> with AddressMixin{
   @override
   void initState() {
     super.initState();
-    fetchStates(); // From mixin
+    fetchStates();
+    _syncFromUser();
   }
   
   void _syncFromUser() {
@@ -43,10 +44,17 @@ class _ProfilePageState extends State<ProfilePage> with AddressMixin{
     
     if (selectedState != null) fetchCities(selectedState!);
 
-      _selectedWantedPets
-        ..clear()
-        ..addAll(UserProfile.parsePreferenceSelections(user.preferences ?? ''));
+    if (user.dob != null && user.dob!.isNotEmpty) {
+      _selectedDate = DateTime.tryParse(user.dob!);
+      _dobController.text = _selectedDate != null 
+          ? DateFormat('dd/MM/yyyy').format(_selectedDate!) 
+          : '';
     }
+
+    _selectedWantedPets
+      ..clear()
+      ..addAll(UserProfile.parsePreferenceSelections(user.preferences ?? ''));
+  }
 
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
@@ -113,6 +121,25 @@ class _ProfilePageState extends State<ProfilePage> with AddressMixin{
     });
   }
 
+  // Helper widget to build consistent info rows
+  Widget _buildInfoTile(BuildContext context, {required IconData icon, required String title, required String value}) {
+    final isPlaceholder = value.contains('Não informad');
+    return ListTile(
+      leading: CircleAvatar(
+        backgroundColor: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.5),
+        child: Icon(icon, color: Theme.of(context).colorScheme.primary, size: 20),
+      ),
+      title: Text(title, style: Theme.of(context).textTheme.bodySmall),
+      subtitle: Text(
+        value, 
+        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+          color: isPlaceholder ? Theme.of(context).colorScheme.onSurfaceVariant : Theme.of(context).colorScheme.onSurface,
+          fontStyle: isPlaceholder ? FontStyle.italic : FontStyle.normal,
+        )
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = _authService.currentUser;
@@ -125,12 +152,15 @@ class _ProfilePageState extends State<ProfilePage> with AddressMixin{
           children: [
             Card(
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(24),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
+                    Icon(Icons.account_circle_outlined, size: 64, color: Theme.of(context).colorScheme.primary),
+                    const SizedBox(height: 16),
                     Text(
                       'Você está navegando como visitante',
+                      textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -138,12 +168,16 @@ class _ProfilePageState extends State<ProfilePage> with AddressMixin{
                     const SizedBox(height: 8),
                     const Text(
                       'Entre para salvar suas preferências e começar a adotar pets!',
+                      textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 16),
-                    FilledButton.icon(
-                      onPressed: _handleLogin,
-                      icon: const Icon(Icons.login_outlined),
-                      label: const Text('Entrar ou criar conta'),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: _handleLogin,
+                        icon: const Icon(Icons.login_outlined),
+                        label: const Text('Entrar ou criar conta'),
+                      ),
                     ),
                   ],
                 ),
@@ -168,67 +202,126 @@ class _ProfilePageState extends State<ProfilePage> with AddressMixin{
       body: ListView(
         padding: const EdgeInsets.all(24),
         children: [
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Informações da conta',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+          // Header Section
+          Center(
+            child: Column(
+              children: [
+                CircleAvatar(
+                  radius: 48,
+                  backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                  child: Text(
+                    user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
+                    style: TextStyle(
+                      fontSize: 36,
+                      color: Theme.of(context).colorScheme.onPrimaryContainer,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.person_outline),
-                    title: Text(user.name), // No '?' needed
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(user.email), // No '?' needed
-                        if (user.dob != null)
-                          Text('Nascimento: ${DateFormat('dd/MM/yyyy').format(DateTime.parse(user.dob!))}'),
-                        if (user.contactNumber != null && user.contactNumber!.isNotEmpty)
-                          Text('Telefone: ${user.contactNumber}'),
-                        if (user.city != null && user.state != null)
-                          Text('Localização: ${user.city}/${user.state}'),
-                      ],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  user.name,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  user.email,
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 32),
+
+          // Read-only Details Section
+          if (!_isEditing) ...[
+            Card(
+              clipBehavior: Clip.antiAlias,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text(
+                      'Informações de Contato',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  if (user.preferences?.isNotEmpty ?? false) ...[
-                    Text('Preferências:', style: Theme.of(context).textTheme.titleSmall),
-                    const SizedBox(height: 6),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: UserProfile.parsePreferenceSelections(user.preferences!)
-                          .map((option) => Chip(label: Text(UserProfile.labelForPreference(option))))
-                          .toList(),
-                    ),
-                  ],
-                  const SizedBox(height: 12),
-                  FilledButton.icon(
-                    onPressed: () => setState(() => _isEditing = true),
-                    icon: const Icon(Icons.edit_outlined),
-                    label: const Text('Editar perfil'),
+                  const Divider(height: 1),
+                  _buildInfoTile(
+                    context,
+                    icon: Icons.cake_outlined,
+                    title: 'Data de Nascimento',
+                    value: user.dob != null ? DateFormat('dd/MM/yyyy').format(DateTime.parse(user.dob!)) : 'Não informada',
+                  ),
+                  const Divider(height: 1),
+                  _buildInfoTile(
+                    context,
+                    icon: Icons.phone_outlined,
+                    title: 'Telefone',
+                    value: (user.contactNumber != null && user.contactNumber!.isNotEmpty) ? user.contactNumber! : 'Não informado',
+                  ),
+                  const Divider(height: 1),
+                  _buildInfoTile(
+                    context,
+                    icon: Icons.location_on_outlined,
+                    title: 'Localização',
+                    value: (user.city != null && user.state != null) ? '${user.city} - ${user.state}' : 'Não informada',
                   ),
                 ],
               ),
             ),
-          ),
+            
+            if (user.preferences?.isNotEmpty ?? false) ...[
+              const SizedBox(height: 16),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Preferências de Adoção',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: UserProfile.parsePreferenceSelections(user.preferences!)
+                            .map((option) => Chip(
+                                  label: Text(UserProfile.labelForPreference(option)),
+                                  backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
+                                  side: BorderSide.none,
+                                ))
+                            .toList(),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+            
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: () => setState(() => _isEditing = true),
+                icon: const Icon(Icons.edit_outlined),
+                label: const Text('Editar perfil'),
+              ),
+            ),
+          ],
+
+          // Editing Section
           if (_isEditing) ...[
-            const SizedBox(height: 16),
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Editar perfil', style: Theme.of(context).textTheme.titleMedium),
+                    Text('Editar perfil', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
                     const SizedBox(height: 16),
                     TextField(controller: _nameController, decoration: const InputDecoration(labelText: 'Nome')),
                     const SizedBox(height: 12),
@@ -247,8 +340,8 @@ class _ProfilePageState extends State<ProfilePage> with AddressMixin{
                         labelText: 'Telefone (opcional)',
                         hintText: '(84) 99999-9999', 
                         counterText: ''
-                        ),
                       ),
+                    ),
                     const SizedBox(height: 12),
                     TextField(
                       controller: cepController,
@@ -280,8 +373,9 @@ class _ProfilePageState extends State<ProfilePage> with AddressMixin{
                       onChanged: (val) => setState(() => selectedCity = val),
                       decoration: const InputDecoration(labelText: 'Cidade (opcional)'),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 24),
                     Text('Que tipo de pet você quer?', style: Theme.of(context).textTheme.titleSmall),
+                    const SizedBox(height: 8),
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
@@ -298,7 +392,7 @@ class _ProfilePageState extends State<ProfilePage> with AddressMixin{
                         );
                       }).toList(),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 24),
                     if (_message != null) ...[
                       Text(_message!, style: TextStyle(color: _message!.contains('sucesso') ? Colors.green : Colors.redAccent)),
                       const SizedBox(height: 12),

@@ -4,6 +4,7 @@ import '../../../../core/services/auth_service.dart';
 import '../../../adoption/presentation/pages/adoption_form_page.dart';
 import '../../data/pet_service.dart';
 import '../widgets/pet_card.dart';
+import '../../../../core/mixins/setup_dialogue_mixin.dart';
 
 class ProductsPage extends StatefulWidget {
   const ProductsPage({super.key});
@@ -12,7 +13,7 @@ class ProductsPage extends StatefulWidget {
   State<ProductsPage> createState() => _ProductsPageState();
 }
 
-class _ProductsPageState extends State<ProductsPage> {
+class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin {
   final PetApiService _apiService = PetApiService();
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
@@ -27,6 +28,10 @@ class _ProductsPageState extends State<ProductsPage> {
   @override
   void initState() {
     super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      checkAndShowSetupDialog(); 
+    });
     
     final user = AuthService.instance.currentUser;
     if (user != null && (user.preferences?.isNotEmpty ?? false)) {
