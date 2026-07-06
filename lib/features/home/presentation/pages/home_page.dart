@@ -1,6 +1,6 @@
+import 'package:adopet/core/services/auth_service.dart';
+import 'package:adopet/features/adoption/presentation/pages/setup_profile_page.dart';
 import 'package:flutter/material.dart';
-
-import '../../../../core/services/persistence_service.dart';
 import '../../../products/presentation/pages/products_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -11,19 +11,38 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final PersistenceService _persistence = PersistenceService();
   List<Map<String, dynamic>> _submissions = [];
 
   @override
   void initState() {
     super.initState();
-    _loadSubmissions();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final user = AuthService.instance.currentUser;
+      if (user != null && !user.isSetupComplete) {
+        _showSetupDialog();
+      }
+    });
   }
 
-  Future<void> _loadSubmissions() async {
-    final data = await _persistence.loadSubmissions();
-    if (!mounted) return;
-    setState(() => _submissions = data);
+  void _showSetupDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false, // User must interact
+      builder: (context) => AlertDialog(
+        title: const Text('Quase lá!'),
+        content: const Text('Complete seu perfil para aproveitar todas as funcionalidades.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Depois')),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const SetupProfilePage()));
+            },
+            child: const Text('Completar agora'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override

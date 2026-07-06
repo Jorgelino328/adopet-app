@@ -54,6 +54,14 @@ class UserProfile {
     return age >= 18;
   }
 
+  bool get isSetupComplete {
+    return dob != null && 
+          contactNumber != null && contactNumber!.isNotEmpty &&
+          cep != null && cep!.isNotEmpty &&
+          city != null && city!.isNotEmpty &&
+          state != null && state!.isNotEmpty;
+  }
+
   factory UserProfile.fromJson(Map<String, dynamic> json) {
     return UserProfile(
       id: json['id'] as String,

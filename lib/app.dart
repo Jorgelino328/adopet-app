@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'core/services/auth_service.dart';
 import 'core/theme/app_theme.dart';
+import 'features/adoption/presentation/pages/setup_profile_page.dart';
 import 'features/home/presentation/pages/home_page.dart';
 import 'features/products/presentation/pages/products_page.dart';
 import 'features/profile/presentation/pages/profile_page.dart';
@@ -39,6 +40,14 @@ class _AdopetAppState extends State<AdopetApp> {
       title: 'Adopet',
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(),
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('pt', 'BR'),
+      ],
       home: _isReady
           ? const AdopetShell()
           : const Scaffold(body: Center(child: CircularProgressIndicator())),
@@ -60,6 +69,29 @@ class _AdopetShellState extends State<AdopetShell> {
     ProductsPage(),
     ProfilePage(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkSetupStatus();
+    });
+  }
+
+  void _checkSetupStatus() {
+    final user = AuthService.instance.currentUser;
+    if (user != null && !user.isSetupComplete) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Por favor, complete seu cadastro para continuar.'),
+          duration: Duration(seconds: 5),
+        ),
+      );
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const SetupProfilePage()),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
