@@ -24,15 +24,27 @@ class _HomePageState extends State<HomePage> with SetupDialogMixin {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(title: const Text(
-            'AdoPet',
-            style: TextStyle(
-              fontSize: 32.0,
-              fontWeight: FontWeight.w900,
-              color: Color(0xFF5C6BC0),
-              letterSpacing: 1.2,
+      appBar: AppBar(
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Image.asset(
+              'assets/icon.png', 
+              height: 32,
+              width: 32,
             ),
-          )),
+            const SizedBox(width: 12),
+            const Text(
+              'AdoPet',
+              style: TextStyle(
+                fontSize: 36.0,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ],
+        ),
+        centerTitle: true,
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
@@ -51,7 +63,7 @@ class _HomePageState extends State<HomePage> with SetupDialogMixin {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Encontre seu novo melhor amigo',
+                      'Encontre seu novo melhor amigo!',
                       style: Theme.of(context).textTheme.headlineSmall
                           ?.copyWith(fontWeight: FontWeight.bold),
                     ),
@@ -75,11 +87,19 @@ class _HomePageState extends State<HomePage> with SetupDialogMixin {
                 ),
               ),
               const SizedBox(height: 24),
-              Text(
-                'Últimas adoções salvas',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              Row(
+                children: [
+                  const Icon(Icons.history, size: 28),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Últimas adoções salvas',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 12),
               if (_submissions.isEmpty)
