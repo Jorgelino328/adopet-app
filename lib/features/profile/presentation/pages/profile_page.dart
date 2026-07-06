@@ -129,11 +129,17 @@ class _ProfilePageState extends State<ProfilePage> with AddressMixin{
         backgroundColor: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.5),
         child: Icon(icon, color: Theme.of(context).colorScheme.primary, size: 20),
       ),
-      title: Text(title, style: Theme.of(context).textTheme.bodySmall),
+      title: Text(
+        title, 
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: Colors.grey[800],
+          fontWeight: FontWeight.bold,
+          ),
+        ),
       subtitle: Text(
         value, 
         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-          color: isPlaceholder ? Theme.of(context).colorScheme.onSurfaceVariant : Theme.of(context).colorScheme.onSurface,
+          color: Colors.grey[600],
           fontStyle: isPlaceholder ? FontStyle.italic : FontStyle.normal,
         )
       ),
@@ -228,12 +234,19 @@ class _ProfilePageState extends State<ProfilePage> with AddressMixin{
                 const SizedBox(height: 16),
                 Text(
                   user.name,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onPrimaryContainer,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   user.email,
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: Colors.grey[600],
+                    fontStyle: FontStyle.italic,
+                    fontWeight: FontWeight.w400,
+                    ),
                 ),
               ],
             ),
@@ -251,7 +264,10 @@ class _ProfilePageState extends State<ProfilePage> with AddressMixin{
                     padding: const EdgeInsets.all(16.0),
                     child: Text(
                       'Informações de Contato',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
                     ),
                   ),
                   const Divider(height: 1),
@@ -289,7 +305,10 @@ class _ProfilePageState extends State<ProfilePage> with AddressMixin{
                     children: [
                       Text(
                         'Preferências de Adoção',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
                       ),
                       const SizedBox(height: 12),
                       Wrap(
@@ -328,7 +347,13 @@ class _ProfilePageState extends State<ProfilePage> with AddressMixin{
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Editar perfil', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                    Text(
+                      'Editar perfil', 
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
                     const SizedBox(height: 16),
                     TextField(controller: _nameController, decoration: const InputDecoration(labelText: 'Nome')),
                     const SizedBox(height: 12),
@@ -381,7 +406,7 @@ class _ProfilePageState extends State<ProfilePage> with AddressMixin{
                       decoration: const InputDecoration(labelText: 'Cidade (opcional)'),
                     ),
                     const SizedBox(height: 24),
-                    Text('Que tipo de pet você quer?', style: Theme.of(context).textTheme.titleSmall),
+                    Text('Que tipo de pet você quer?', style: Theme.of(context).textTheme.titleMedium),
                     const SizedBox(height: 8),
                     Wrap(
                       spacing: 8,

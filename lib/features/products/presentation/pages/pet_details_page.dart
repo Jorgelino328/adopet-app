@@ -17,7 +17,7 @@ class PetDetailsPage extends StatelessWidget {
           children: [
             Image.network(
               pet.imageUrl,
-              height: 300,
+              height: 250,
               width: double.infinity,
               fit: BoxFit.cover,
             ),
@@ -51,6 +51,19 @@ class PetDetailsPage extends StatelessWidget {
                               color: Colors.grey[700],
                               fontWeight: FontWeight.w600,
                             ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(Icons.location_on, size: 16, color: Theme.of(context).colorScheme.primary),
+                          const SizedBox(width: 4),
+                          Text(
+                            pet.location,
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 24),
                       _buildSection(context, 'Sobre', pet.description),

@@ -81,7 +81,7 @@ class _AdopetShellState extends State<AdopetShell> {
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
-        onDestinationSelected: (index) => setState(() => _currentIndex = index),
+        onDestinationSelected: (index) => setState(() => _currentIndex = index),  
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.home_outlined),

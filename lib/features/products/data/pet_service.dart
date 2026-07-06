@@ -9,7 +9,8 @@ class PetItem {
     required this.imageUrl,
     required this.sex,        
     required this.temperament, 
-    required this.health,      
+    required this.health,
+    required this.location,      
   });
 
   final String id;
@@ -22,12 +23,13 @@ class PetItem {
   final String sex;
   final String temperament;
   final String health;
+  final String location;
 }
 
 class PetApiService {
   Future<List<PetItem>> fetchPets({required int page, int pageSize = 10}) async {
     await Future<void>.delayed(const Duration(milliseconds: 650));
-
+    
     final allPets = <PetItem>[
       const PetItem(
         id: 'p1',
@@ -38,6 +40,7 @@ class PetApiService {
         sex: 'Fêmea',
         temperament: 'Dócil e sociável',
         health: 'Vacinada e vermifugada',
+        location: 'Parnamirim, RN',
         description: 'Muito dócil e pronta para interagir com crianças.',
         imageUrl: 'https://images.unsplash.com/photo-1518717758536-85ae29035b6d?auto=format&fit=crop&w=600&q=80',
       ),
@@ -50,6 +53,7 @@ class PetApiService {
         sex: 'Macho',
         temperament: 'Aventureiro e brincalhão',
         health: 'Castrado e saudável',
+        location: 'Natal, RN',
         description: 'Aventureiro e cheio de energia para brincar.',
         imageUrl: 'https://images.unsplash.com/photo-1511044568932-338cba0ad803?auto=format&fit=crop&w=600&q=80',
       ),
@@ -62,6 +66,7 @@ class PetApiService {
         sex: 'Macho',
         temperament: 'Curioso e muito alegre',
         health: 'Exames em dia',
+        location: 'Mossoró, RN',
         description: 'Cantora e muito curiosa.',
         imageUrl: 'https://images.unsplash.com/photo-1444464666168-49d633b86797?auto=format&fit=crop&w=600&q=80',
       ),
@@ -74,6 +79,7 @@ class PetApiService {
         sex: 'Fêmea',
         temperament: 'Calma e protetora',
         health: 'Saudável, precisa de exercícios',
+        location: 'Parnamirim, RN',
         description: 'Ideal para famílias com espaço para correr.',
         imageUrl: 'https://images.unsplash.com/photo-1517849845537-4d257902454a?auto=format&fit=crop&w=600&q=80',
       ),
@@ -86,6 +92,7 @@ class PetApiService {
         sex: 'Fêmea',
         temperament: 'Independente e carinhosa',
         health: 'Check-up concluído',
+        location: 'Natal, RN',
         description: 'Calma, carinhosa e bem independente.',
         imageUrl: 'https://images.unsplash.com/photo-1518791841217-8f162f1e1131?auto=format&fit=crop&w=600&q=80',
       ),
@@ -98,6 +105,7 @@ class PetApiService {
         sex: 'Macho',
         temperament: 'Muito ativo',
         health: 'Saúde de ferro',
+        location: 'Mossoró, RN',
         description: 'Pequeno e muito ativo à noite.',
         imageUrl: 'https://images.unsplash.com/photo-1425082661705-1834bfd09dca?q=80&w=1476&auto=format&fit=crop',
       ),
@@ -110,6 +118,7 @@ class PetApiService {
         sex: 'Macho',
         temperament: 'Companheiro e preguiçoso',
         health: 'Requer acompanhamento cardíaco',
+        location: 'Parnamirim, RN',
         description: 'Muito companheiro e ótimo para apartamentos.',
         imageUrl: 'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&w=600&q=80',
       ),
@@ -122,6 +131,7 @@ class PetApiService {
         sex: 'Fêmea',
         temperament: 'Elegante e tranquila',
         health: 'Necessita escovação regular',
+        location: 'Natal, RN',
         description: 'Elegante e tranquila, ótima para ambientes serenos.',
         imageUrl: 'https://images.unsplash.com/photo-1495360010541-f48722b34f7d?auto=format&fit=crop&w=600&q=80',
       ),
@@ -134,6 +144,7 @@ class PetApiService {
         sex: 'Macho',
         temperament: 'Muito pacífico',
         health: 'Excelente saúde',
+        location: 'Mossoró, RN',
         description: 'Tranquilo e adora passear no gramado.',
         imageUrl: 'https://plus.unsplash.com/premium_photo-1724311824020-d5aa35632c81?q=80&w=1470&auto=format&fit=crop',
       ),
@@ -146,6 +157,7 @@ class PetApiService {
         sex: 'Macho',
         temperament: 'Muito sociável e inteligente',
         health: 'Saúde plena',
+        location: 'Parnamirim, RN',
         description: 'Muito falador e inteligente.',
         imageUrl: 'https://images.unsplash.com/photo-1552728089-57bdde30beb3?q=80&w=725&auto=format&fit=crop',
       ),

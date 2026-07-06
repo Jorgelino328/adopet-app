@@ -64,8 +64,10 @@ class _HomePageState extends State<HomePage> with SetupDialogMixin {
                   children: [
                     Text(
                       'Encontre seu novo melhor amigo!',
-                      style: Theme.of(context).textTheme.headlineSmall
-                          ?.copyWith(fontWeight: FontWeight.bold),
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
                     ),
                     const SizedBox(height: 10),
                     const Text(
@@ -89,13 +91,14 @@ class _HomePageState extends State<HomePage> with SetupDialogMixin {
               const SizedBox(height: 24),
               Row(
                 children: [
-                  const Icon(Icons.history, size: 28),
+                  const Icon(Icons.history, size: 32, color: Color(0xFF8E4C32), fontWeight: FontWeight.bold,),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'Últimas adoções salvas',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.primary,
                       ),
                     ),
                   ),

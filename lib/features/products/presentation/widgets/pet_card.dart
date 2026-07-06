@@ -56,8 +56,10 @@ class PetCard extends StatelessWidget {
                       Expanded(
                         child: Text(
                           pet.name,
-                          style: Theme.of(context).textTheme.titleLarge
-                              ?.copyWith(fontWeight: FontWeight.bold),
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                         ),
                       ),
                       IconButton(
@@ -90,6 +92,17 @@ class PetCard extends StatelessWidget {
                     onPressed: onAdoptPressed,
                     icon: const Icon(Icons.pets),
                     label: const Text('Quero adotar'),
+                  ),
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      pet.location,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.grey[600],
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
                   ),
                 ],
               ),
