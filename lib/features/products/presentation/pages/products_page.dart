@@ -25,6 +25,8 @@ class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin, Addr
   String _searchText = '';
   
   final Set<String> _selectedFilters = <String>{};
+  
+  bool _showOnlyFavorites = false;
 
   @override
   void initState() {
@@ -83,6 +85,11 @@ class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin, Addr
 
   List<PetItem> _applyFilters(List<PetItem> source) {
     final normalizedQuery = _searchText.trim().toLowerCase();
+    
+    final user = AuthService.instance.currentUser;
+    final favoriteIds = user != null 
+        ? UserProfile.parsePreferenceSelections(user.favorites) 
+        : <String>[];
 
     return source.where((pet) {
       final matchesSearch = normalizedQuery.isEmpty ||
@@ -103,8 +110,10 @@ class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin, Addr
       } else if (selectedState != null) {
         matchesLocation = pet.location.toLowerCase().endsWith(selectedState!.toLowerCase());
       }
+      
+      final matchesFavorite = !_showOnlyFavorites || favoriteIds.contains(pet.id);
 
-      return matchesSearch && matchesFilter && matchesLocation;
+      return matchesSearch && matchesFilter && matchesLocation && matchesFavorite;
     }).toList();
   }
 
@@ -150,7 +159,11 @@ class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin, Addr
       favorites: UserProfile.serializePreferenceSelections(favs),
     );
     
-    setState(() {});
+    setState(() {
+      if (_showOnlyFavorites) {
+        _filteredPets = _applyFilters(_pets);
+      }
+    });
   }
 
   void _openAdoptionForm(PetItem pet) {
@@ -159,6 +172,17 @@ class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin, Addr
       MaterialPageRoute<void>(
         builder: (context) => AdoptionFormPage(selectedPet: pet),
       ),
+    );
+  }
+
+  Widget _buildPetTypeChip(String type) {
+    final isSelected = _selectedFilters.contains(type);
+    return FilterChip(
+      labelStyle: const TextStyle(fontSize: 12),
+      padding: EdgeInsets.zero,
+      label: Center(child: Text(UserProfile.labelForPreference(type))),
+      selected: isSelected,
+      onSelected: (_) => _toggleFilter(type),
     );
   }
 
@@ -184,14 +208,49 @@ class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin, Addr
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    TextField(
-                      controller: _searchController,
-                      onChanged: _onSearchChanged,
-                      decoration: const InputDecoration(
-                        hintText: 'Buscar por nome ou raça',
-                        prefixIcon: Icon(Icons.search),
-                        border: OutlineInputBorder(),
-                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _searchController,
+                            onChanged: _onSearchChanged,
+                            decoration: const InputDecoration(
+                              hintText: 'Buscar por nome ou raça',
+                              prefixIcon: Icon(Icons.search),
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        InkWell(
+                          onTap: () {
+                            if (currentUser == null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Faça login!')),
+                              );
+                              return;
+                            }
+                            setState(() {
+                              _showOnlyFavorites = !_showOnlyFavorites;
+                              _filteredPets = _applyFilters(_pets);
+                            });
+                          },
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                _showOnlyFavorites ? Icons.favorite : Icons.favorite_border,
+                                color: _showOnlyFavorites ? Colors.red : Colors.grey,
+                                size: 24,
+                              ),
+                              const Text(
+                                'Favoritos',
+                                style: TextStyle(fontSize: 10),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 12),
                     
@@ -201,46 +260,35 @@ class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin, Addr
                         SizedBox(
                           width: 90,
                           child: DropdownButtonFormField<String>(
-                            key: Key('state_${states.length}_$selectedState'), 
-                            value: selectedState,
+                            key: Key('state_${states.length}_$selectedState'),
                             isExpanded: true,
-                            decoration: const InputDecoration(
-                              labelText: 'UF',
-                              border: OutlineInputBorder(),
-                              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-                            ),
-                            items: states.map((s) => DropdownMenuItem(
-                              value: s['sigla'] as String, 
-                              child: Text(s['sigla'])
-                            )).toList(),
+                            decoration: const InputDecoration(labelText: 'UF', border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14)),
+                            hint: Text(selectedState ?? 'UF'),
+                            items: [
+                              const DropdownMenuItem<String>(value: null, child: Text('UF')),
+                              ...states.map((s) => s['sigla'] as String).toSet().map((sigla) => DropdownMenuItem(value: sigla, child: Text(sigla))),
+                            ],
                             onChanged: (val) {
                               setState(() {
                                 selectedState = val;
                                 selectedCity = null;
                                 _filteredPets = _applyFilters(_pets);
+                                if (val != null) fetchCities(val); else cities = [];
                               });
-                              if (val != null) {
-                                fetchCities(val);
-                              }
                             },
                           ),
                         ),
                         const SizedBox(width: 8),
-                        
                         Expanded(
                           child: DropdownButtonFormField<String>(
-                            key: Key('city_${cities.length}_$selectedCity'), 
-                            value: selectedCity,
+                            key: Key('city_${cities.length}_$selectedCity'),
                             isExpanded: true,
-                            decoration: const InputDecoration(
-                              labelText: 'Cidade',
-                              border: OutlineInputBorder(),
-                              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-                            ),
-                            items: cities.map((c) => DropdownMenuItem(
-                              value: c['nome'] as String, 
-                              child: Text(c['nome'])
-                            )).toList(),
+                            decoration: const InputDecoration(labelText: 'Cidade', border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14)),
+                            hint: Text(selectedCity ?? 'Cidade'),
+                            items: [
+                              const DropdownMenuItem<String>(value: null, child: Text('Cidade')),
+                              ...cities.map((c) => c['nome'] as String).toSet().map((nome) => DropdownMenuItem(value: nome, child: Text(nome))),
+                            ],
                             onChanged: (val) {
                               setState(() {
                                 selectedCity = val;
@@ -249,22 +297,6 @@ class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin, Addr
                             },
                           ),
                         ),
-                        
-                        if (selectedState != null || selectedCity != null)
-                          Padding(
-                            padding: const EdgeInsets.only(left: 4),
-                            child: IconButton(
-                              icon: const Icon(Icons.clear),
-                              color: Colors.grey[600],
-                              onPressed: () {
-                                setState(() {
-                                  selectedState = null;
-                                  selectedCity = null;
-                                  _filteredPets = _applyFilters(_pets);
-                                });
-                              },
-                            ),
-                          ),
                       ],
                     ),
                     const SizedBox(height: 16),
@@ -299,20 +331,22 @@ class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin, Addr
                 child: Center(child: CircularProgressIndicator()),
               )
             else if (_filteredPets.isEmpty)
-              const SliverFillRemaining(
+              SliverFillRemaining(
                 hasScrollBody: false,
                 child: Center(
                   child: Padding(
-                    padding: EdgeInsets.all(24),
+                    padding: const EdgeInsets.all(24),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.sentiment_very_dissatisfied, size: 64, color: Color(0xFF8E4C32)),
-                        SizedBox(height: 16),
+                        const Icon(Icons.sentiment_very_dissatisfied, size: 64, color: Color(0xFF8E4C32)),
+                        const SizedBox(height: 16),
                         Text(
-                          'Nenhum pet encontrado! Por favor, ajuste seus filtros e tente novamente.',
+                          _showOnlyFavorites 
+                            ? 'Você ainda não possui pets favoritados com esses filtros!'
+                            : 'Nenhum pet encontrado! Por favor, ajuste seus filtros e tente novamente.',
                           textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
                         ),
                       ],
                     ),
