@@ -143,10 +143,16 @@ class _SetupProfilePageState extends State<SetupProfilePage> with AddressMixin {
           DropdownButtonFormField<String>(
             key: Key('state_${states.length}_$selectedState'), 
             initialValue: selectedState, 
-            items: states.map((s) => DropdownMenuItem(
-              value: s['sigla'] as String, 
-              child: Text(s['sigla'])
-            )).toList(),
+            items: [
+              const DropdownMenuItem<String>(
+                value: null,
+                child: Text('Não informado'),
+              ),
+              ...states.map((s) => DropdownMenuItem(
+                value: s['sigla'] as String, 
+                child: Text(s['sigla'])
+              )),
+            ],
             onChanged: (val) {
               setState(() {
                 selectedState = val;
@@ -160,10 +166,16 @@ class _SetupProfilePageState extends State<SetupProfilePage> with AddressMixin {
           DropdownButtonFormField<String>(
             key: Key('city_${cities.length}_$selectedCity'), 
             initialValue: selectedCity, 
-            items: cities.map((c) => DropdownMenuItem(
-              value: c['nome'] as String, 
-              child: Text(c['nome'])
-            )).toList(),
+            items: [
+              const DropdownMenuItem<String>(
+                value: null,
+                child: Text('Não informada'),
+              ),
+              ...cities.map((c) => DropdownMenuItem(
+                value: c['nome'] as String, 
+                child: Text(c['nome'])
+              )),
+            ],
             onChanged: (val) => setState(() => selectedCity = val),
             decoration: const InputDecoration(labelText: 'Cidade (opcional)'),
           ),

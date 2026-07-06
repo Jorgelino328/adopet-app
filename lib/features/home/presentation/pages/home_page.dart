@@ -1,6 +1,9 @@
+import 'package:adopet/features/products/presentation/pages/pet_details_page.dart';
 import 'package:flutter/material.dart';
 import '../../../products/presentation/pages/products_page.dart';
 import '../../../../core/mixins/setup_dialogue_mixin.dart';
+import '../../../../core/services/persistence_service.dart';
+import '../../../products/data/pet_service.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -11,12 +14,25 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> with SetupDialogMixin {
   List<Map<String, dynamic>> _submissions = [];
+  List<PetItem> _allPets = []; 
+  final PetApiService _api = PetApiService();
+  final PersistenceService _persistence = PersistenceService();
 
   @override
   void initState() {
     super.initState();
+    _loadData();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       checkAndShowSetupDialog();
+    });
+  }
+
+  Future<void> _loadData() async {
+    final submissions = await _persistence.loadSubmissions();
+    final pets = await _api.fetchPets(page: 1, pageSize: 100); 
+    setState(() {
+      _submissions = submissions;
+      _allPets = pets;
     });
   }
 
@@ -64,8 +80,10 @@ class _HomePageState extends State<HomePage> with SetupDialogMixin {
                   children: [
                     Text(
                       'Encontre seu novo melhor amigo!',
-                      style: Theme.of(context).textTheme.headlineSmall
-                          ?.copyWith(fontWeight: FontWeight.bold),
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
                     ),
                     const SizedBox(height: 10),
                     const Text(
@@ -89,13 +107,14 @@ class _HomePageState extends State<HomePage> with SetupDialogMixin {
               const SizedBox(height: 24),
               Row(
                 children: [
-                  const Icon(Icons.history, size: 28),
+                  const Icon(Icons.history, size: 32, color: Color(0xFF8E4C32), fontWeight: FontWeight.bold,),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Últimas adoções salvas',
+                      'Últimas adoções',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.primary,
                       ),
                     ),
                   ),
@@ -118,17 +137,41 @@ class _HomePageState extends State<HomePage> with SetupDialogMixin {
                   itemCount: _submissions.length > 3 ? 3 : _submissions.length,
                   separatorBuilder: (_, _) => const SizedBox(height: 8),
                   itemBuilder: (context, index) {
-                    final submission =
-                        _submissions[_submissions.length - 1 - index];
+                    final submission = _submissions[_submissions.length - 1 - index];
                     final name = submission['name'] as String? ?? 'Cliente';
-                    final pet = submission['petPreference'] as String? ?? 'Pet';
+                    final petId = submission['petId'] as String?;
+                    
+                    final pet = _allPets.firstWhere(
+                      (p) => p.id == petId,
+                      orElse: () => const PetItem(
+                        id: '', name: 'Pet', type: '', breed: '', age: '', 
+                        description: '', imageUrl: '', sex: '', temperament: '', 
+                        health: '', location: ''
+                      ),
+                    );
+
                     return Card(
                       child: ListTile(
-                        leading: const CircleAvatar(
-                          child: Icon(Icons.favorite),
+                        leading: CircleAvatar(
+                          backgroundImage: pet.imageUrl.isNotEmpty 
+                              ? NetworkImage(pet.imageUrl) 
+                              : null,
+                          child: pet.imageUrl.isEmpty ? const Icon(Icons.pets) : null,
                         ),
                         title: Text(name),
-                        subtitle: Text('Preferência: $pet'),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Adotou: ${pet.name}'),
+                            Text('${pet.breed} • ${pet.location}'),
+                          ],
+                        ),
+                        onTap: pet.id.isNotEmpty
+                            ? () => Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => PetDetailsPage(pet: pet)),
+                              )
+                            : null,
                       ),
                     );
                   },

@@ -17,16 +17,6 @@ class _AdoptionFormPageState extends State<AdoptionFormPage> {
   final _noteController = TextEditingController();
   final PersistenceService _persistence = PersistenceService();
 
-  String? _petPreference;
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.selectedPet != null) {
-      _petPreference = widget.selectedPet!.name;
-    }
-  }
-
   @override
   void dispose() {
     _noteController.dispose();
@@ -37,7 +27,6 @@ class _AdoptionFormPageState extends State<AdoptionFormPage> {
     if (!_formKey.currentState!.validate()) return;
 
     final currentUser = AuthService.instance.currentUser;
-    
     if (currentUser == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Você precisa estar logado para adotar.')),
@@ -45,6 +34,18 @@ class _AdoptionFormPageState extends State<AdoptionFormPage> {
       return;
     }
 
+    if (widget.selectedPet == null) return;
+
+    final existingSubmissions = await _persistence.loadSubmissions();
+    final alreadyAdopted = existingSubmissions.any((s) => s['petId'] == widget.selectedPet!.id);
+
+    if (alreadyAdopted) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Você já solicitou a adoção deste pet!')),
+      );
+      return;
+    }
     if (currentUser.dob == null || currentUser.contactNumber == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Complete seu perfil (data de nascimento e telefone) para adotar.')),
@@ -64,7 +65,7 @@ class _AdoptionFormPageState extends State<AdoptionFormPage> {
       'email': currentUser.email,
       'dob': currentUser.dob,
       'contactNumber': currentUser.contactNumber,
-      'petPreference': _petPreference ?? 'Preferência não informada',
+      'petId': widget.selectedPet!.id,
       'note': _noteController.text.trim(),
       'timestamp': DateTime.now().toIso8601String(),
     };
@@ -72,7 +73,6 @@ class _AdoptionFormPageState extends State<AdoptionFormPage> {
     await _persistence.saveSubmission(submission);
 
     if (!mounted) return;
-
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Interesse registrado com sucesso!')),
     );
@@ -81,7 +81,7 @@ class _AdoptionFormPageState extends State<AdoptionFormPage> {
 
   @override
   Widget build(BuildContext context) {
-    final selectedPetName = widget.selectedPet?.name ?? 'Seu futuro pet';
+    final petName = widget.selectedPet?.name ?? 'Pet não selecionado';
     
     return Scaffold(
       appBar: AppBar(title: const Text('Confirmar Adoção')),
@@ -92,51 +92,37 @@ class _AdoptionFormPageState extends State<AdoptionFormPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Quase lá!',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
+                Text('Quase lá!', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Text('Você está solicitando a adoção de: '),
+                const SizedBox(height: 20),
+              
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(8)),
+                child: Row(
+                  children: [
+                    const Icon(Icons.pets, color: Colors.grey),
+                    const SizedBox(width: 8),
+                    Text(petName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  ],
                 ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                'Confirme seu interesse em $selectedPetName. Seus dados (nome, e-mail, data de nascimento e telefone) serão enviados automaticamente a partir do seu perfil.',
-              ),
+              
               const SizedBox(height: 20),
-              DropdownButtonFormField<String>(
-                value: _petPreference,
-                decoration: const InputDecoration(labelText: 'Pet de interesse'),
-                items: const [
-                  DropdownMenuItem(value: 'Luna', child: Text('Luna')),
-                  DropdownMenuItem(value: 'Milo', child: Text('Milo')),
-                  DropdownMenuItem(value: 'Pipoca', child: Text('Pipoca')),
-                  DropdownMenuItem(value: 'Bela', child: Text('Bela')),
-                  DropdownMenuItem(value: 'Nina', child: Text('Nina')),
-                ],
-                onChanged: (value) => setState(() => _petPreference = value),
-                validator: (value) => value == null ? 'Escolha um pet' : null,
-              ),
-              const SizedBox(height: 12),
               TextFormField(
                 controller: _noteController,
                 maxLines: 4,
                 decoration: const InputDecoration(
                   labelText: 'Conte um pouco sobre você.',
                   hintText: 'Escreva por que você quer adotar...',
+                  border: OutlineInputBorder(),
                 ),
-                validator: (value) {
-                  if (value == null || value.trim().length < 10) {
-                    return 'Descreva pelo menos 10 caracteres';
-                  }
-                  return null;
-                },
+                validator: (value) => (value == null || value.trim().length < 10) 
+                    ? 'Descreva pelo menos 10 caracteres' 
+                    : null,
               ),
               const SizedBox(height: 24),
-              Text(
-                'Nossos especialistas entrarão em contato com você em breve.',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-              const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
                 child: FilledButton.icon(
