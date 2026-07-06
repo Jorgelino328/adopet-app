@@ -1,5 +1,6 @@
+import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pet_shop/core/services/auth_service.dart';
+import 'package:adopet/core/services/auth_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -10,55 +11,47 @@ void main() {
   });
 
   group('AuthService', () {
-    test('stores a salted password hash and validates it', () async {
+    test('updates the current user profile preferences and new fields', () async {
       final auth = AuthService.instance;
-      await auth.initialize();
-      await auth.clearForTests();
-
-      final created = await auth.signUp(
+      
+      // Simulate an existing Auth0 session
+      final mockUser = UserProfile(
+        id: 'auth0|123456789',
         name: 'Ana',
         email: 'ana@example.com',
-        password: 'supersecret',
-        preferences: 'gatos,brinquedos',
-        age: 28, // Passed as int
-      );
-
-      expect(created, isTrue);
-
-      final user = await auth.signIn(
-        email: 'ana@example.com',
-        password: 'supersecret',
-      );
-
-      expect(user, isNotNull);
-      expect(user!.name, 'Ana');
-      expect(user.preferences, contains('gatos'));
-      expect(user.age, 28); // Expect int
-    });
-
-    test('updates the current user profile preferences', () async {
-      final auth = AuthService.instance;
-      await auth.initialize();
-      await auth.clearForTests();
-
-      await auth.signUp(
-        name: 'Ana',
-        email: 'ana@example.com',
-        password: 'supersecret',
+        passwordHash: 'managed_by_auth0',
+        dob: '1994-01-01', // New field
+        contactNumber: '(84) 99999-9999', // New field
         preferences: 'dog',
-        age: 31, // Passed as int
+        favorites: '',
+        createdAt: DateTime.now(),
       );
+      
+      SharedPreferences.setMockInitialValues({
+        'auth_session': jsonEncode(mockUser.toJson()),
+      });
 
+      await auth.initialize();
+      
+      expect(auth.currentUser, isNotNull);
+
+      // Test the updateProfile method with the new schema
       final updated = await auth.updateProfile(
-        name: 'Ana',
-        email: 'ana@example.com',
+        name: 'Ana Silva',
         preferences: 'dog,cat',
-        age: 32, // Passed as int
+        dob: '1994-01-01',
+        contactNumber: '(84) 98888-8888',
+        cep: '59000-000',
+        city: 'Parnamirim',
+        state: 'RN',
       );
 
+      // Verify the updates
       expect(updated, isTrue);
+      expect(auth.currentUser?.name, 'Ana Silva');
       expect(auth.currentUser?.preferences, 'dog,cat');
-      expect(auth.currentUser?.age, 32); // Expect int
+      expect(auth.currentUser?.contactNumber, '(84) 98888-8888');
+      expect(auth.currentUser?.city, 'Parnamirim');
     });
   });
 }

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import '../../../../core/services/auth_service.dart';
 import '../../data/pet_service.dart';
 
@@ -62,12 +61,12 @@ class PetCard extends StatelessWidget {
                         ),
                       ),
                       IconButton(
-                        onPressed: onFavoritePressed,
                         icon: Icon(
                           isFavorite ? Icons.favorite : Icons.favorite_border,
-                          color: Colors.redAccent,
+                          color: Colors.red,
                         ),
-                      ),
+                        onPressed: onFavoritePressed, 
+                      )
                     ],
                   ),
                   Text(
@@ -82,7 +81,7 @@ class PetCard extends StatelessWidget {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Chip(label: Text(UserProfile.labelForPreference(pet.type))),
+                      Chip(label: Text(UserProfile.labelForPreference(pet.type))), 
                       const Spacer(),
                     ],
                   ),

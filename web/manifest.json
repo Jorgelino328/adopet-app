@@ -1,6 +1,6 @@
 {
-    "name": "pet_shop",
-    "short_name": "pet_shop",
+    "name": "adopet",
+    "short_name": "adopet",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import '../../../../core/services/auth_service.dart';
 import '../../../../core/services/persistence_service.dart';
 import '../../../products/data/pet_service.dart';
@@ -35,9 +34,7 @@ class _AdoptionFormPageState extends State<AdoptionFormPage> {
   }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
+    if (!_formKey.currentState!.validate()) return;
 
     final currentUser = AuthService.instance.currentUser;
     
@@ -48,10 +45,25 @@ class _AdoptionFormPageState extends State<AdoptionFormPage> {
       return;
     }
 
+    if (currentUser.dob == null || currentUser.contactNumber == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Complete seu perfil (data de nascimento e telefone) para adotar.')),
+      );
+      return;
+    }
+
+    if (!currentUser.isOver18) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Você deve ter pelo menos 18 anos para adotar.')),
+      );
+      return;
+    }
+
     final submission = {
       'name': currentUser.name,
       'email': currentUser.email,
-      'age': currentUser.age ?? 'Não informada',
+      'dob': currentUser.dob,
+      'contactNumber': currentUser.contactNumber,
       'petPreference': _petPreference ?? 'Preferência não informada',
       'note': _noteController.text.trim(),
       'timestamp': DateTime.now().toIso8601String(),
@@ -59,9 +71,7 @@ class _AdoptionFormPageState extends State<AdoptionFormPage> {
 
     await _persistence.saveSubmission(submission);
 
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Interesse registrado com sucesso!')),
@@ -90,14 +100,12 @@ class _AdoptionFormPageState extends State<AdoptionFormPage> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Confirme seu interesse em $selectedPetName. Seus dados (nome, e-mail e idade) serão enviados automaticamente a partir do seu perfil.',
+                'Confirme seu interesse em $selectedPetName. Seus dados (nome, e-mail, data de nascimento e telefone) serão enviados automaticamente a partir do seu perfil.',
               ),
               const SizedBox(height: 20),
               DropdownButtonFormField<String>(
-                initialValue: _petPreference,
-                decoration: const InputDecoration(
-                  labelText: 'Pet de interesse',
-                ),
+                value: _petPreference,
+                decoration: const InputDecoration(labelText: 'Pet de interesse'),
                 items: const [
                   DropdownMenuItem(value: 'Luna', child: Text('Luna')),
                   DropdownMenuItem(value: 'Milo', child: Text('Milo')),
@@ -113,7 +121,8 @@ class _AdoptionFormPageState extends State<AdoptionFormPage> {
                 controller: _noteController,
                 maxLines: 4,
                 decoration: const InputDecoration(
-                  labelText: 'Conte um pouco sobre você e por que deseja adotar.',
+                  labelText: 'Conte um pouco sobre você.',
+                  hintText: 'Escreva por que você quer adotar...',
                 ),
                 validator: (value) {
                   if (value == null || value.trim().length < 10) {
@@ -123,6 +132,11 @@ class _AdoptionFormPageState extends State<AdoptionFormPage> {
                 },
               ),
               const SizedBox(height: 24),
+              Text(
+                'Nossos especialistas entrarão em contato com você em breve.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
                 child: FilledButton.icon(
