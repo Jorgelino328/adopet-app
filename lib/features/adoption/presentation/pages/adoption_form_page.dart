@@ -92,24 +92,10 @@ class _AdoptionFormPageState extends State<AdoptionFormPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Quase lá!', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              Text.rich(
-                TextSpan(
-                  text: 'Você está solicitando a adoção de: ',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 16),
-                  children: [
-                    TextSpan(
-                      text: petName,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const TextSpan(text: '.'),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
+                Text('Quase lá!', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Text('Você está solicitando a adoção de: '),
+                const SizedBox(height: 20),
               
               Container(
                 padding: const EdgeInsets.all(12),

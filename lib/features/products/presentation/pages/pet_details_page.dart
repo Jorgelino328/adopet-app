@@ -2,8 +2,16 @@ import 'package:flutter/material.dart';
 import '../../data/pet_service.dart';
 
 class PetDetailsPage extends StatelessWidget {
-  const PetDetailsPage({super.key, required this.pet});
+  const PetDetailsPage({
+      super.key, 
+      required this.pet, 
+      this.isAdopted = false, 
+      this.onAdoptPressed,
+    });
+    
   final PetItem pet;
+  final bool isAdopted; 
+  final VoidCallback? onAdoptPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -73,7 +81,7 @@ class PetDetailsPage extends StatelessWidget {
                         width: double.infinity,
                         height: 50,
                         child: FilledButton.icon(
-                          onPressed: () {},
+                          onPressed: isAdopted ? null : onAdoptPressed, 
                           icon: const Icon(Icons.pets),
                           label: const Text('Quero adotar'),
                         ),

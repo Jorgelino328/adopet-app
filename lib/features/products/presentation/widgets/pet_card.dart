@@ -89,7 +89,13 @@ class PetCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   FilledButton.icon(
-                    onPressed: onAdoptPressed, 
+                    onPressed: onAdoptPressed,
+                    style: onAdoptPressed == null 
+                        ? FilledButton.styleFrom(
+                            backgroundColor: Colors.grey.shade400,
+                            foregroundColor: Colors.white,
+                          ) 
+                        : null,
                     icon: const Icon(Icons.pets),
                     label: const Text('Quero adotar'),
                   ),

@@ -77,12 +77,19 @@ class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin, Addr
   }
 
 
-  Future<void> _loadAdoptedPets() async {
-    final submissions = await _persistence.loadSubmissions();
+Future<void> _loadAdoptedPets() async {
+  final submissions = await _persistence.loadSubmissions();
+  
+  setState(() {
+    _adoptedPetIds = submissions.map((s) => s['petId'] as String).toList();
+  });
+  
+  if (_pets.isNotEmpty) {
     setState(() {
-      _adoptedPetIds = submissions.map((s) => s['petId'] as String).toList();
+      _filteredPets = _applyFilters(_pets);
     });
   }
+}
 
   Future<void> _loadPets() async {
     setState(() => _isLoading = true);
@@ -124,6 +131,10 @@ class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin, Addr
         : <String>[];
 
     return source.where((pet) {
+      final isAdopted = _adoptedPetIds.contains(pet.id);
+      
+      if (isAdopted) return false;
+
       final matchesSearch = normalizedQuery.isEmpty ||
           [
             pet.name,
