@@ -1,74 +1,57 @@
-import 'package:adopet/core/services/persistence_service.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../../../core/services/persistence_service.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../../adoption/presentation/pages/adoption_form_page.dart';
 import '../../data/pet_service.dart';
 import '../widgets/pet_card.dart';
 import '../../../../core/mixins/setup_dialogue_mixin.dart';
 import '../../../../core/mixins/address_mixin.dart';
-import 'package:adopet/features/products/presentation/pages/pet_details_page.dart';
+import 'package:adopet/features/pets/presentation/pages/pet_details_page.dart';
+import '../../models/pet_item.dart';
+import '../providers/pets_provider.dart';
 
-class ProductsPage extends StatefulWidget {
-  const ProductsPage({super.key});
+class PetsPage extends StatefulWidget {
+  const PetsPage({super.key});
 
   @override
-  State<ProductsPage> createState() => _ProductsPageState();
+  State<PetsPage> createState() => _PetsPageState();
 }
 
-class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin, AddressMixin {
-  final PetApiService _apiService = PetApiService();
+class _PetsPageState extends State<PetsPage> with SetupDialogMixin, AddressMixin {
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
-  final PersistenceService _persistence = PersistenceService();
-
-  List<PetItem> _pets = [];
-  List<PetItem> _filteredPets = [];
-  List<String> _adoptedPetIds = [];
-  bool _isLoading = false;
-  String _searchText = '';
-  
-  final Set<String> _selectedFilters = <String>{};
-  
-  bool _showOnlyFavorites = false;
 
   @override
   void initState() {
     super.initState();
 
-    _initializePageData();
-    
     WidgetsBinding.instance.addPostFrameCallback((_) {
       checkAndShowSetupDialog(); 
     });
     
-    fetchStates();
+    fetchStates();  
 
     final user = AuthService.instance.currentUser;
-    if (user != null) {
-      if (user.state != null) {
-        selectedState = user.state;
-        fetchCities(selectedState!).then((_) {
-          if (mounted && user.city != null) {
-            setState(() {
-              if (cities.any((c) => c['nome'] == user.city)) {
-                selectedCity = user.city;
-              }
-              _filteredPets = _applyFilters(_pets);
-            });
-          }
-        });
-      }
+    if (user != null && user.state != null) {
+      selectedState = user.state;
+      fetchCities(selectedState!).then((_) {
+        if (mounted && user.city != null) {
+          setState(() {
+            if (cities.any((c) => c['nome'] == user.city)) {
+              selectedCity = user.city;
+            }
+          });
 
-      if (user.preferences?.isNotEmpty ?? false) {
-        _selectedFilters.addAll(
-          UserProfile.parsePreferenceSelections(user.preferences),
-        );
-      }
+          context.read<PetsProvider>().updateLocation(
+            state: selectedState, 
+            city: selectedCity
+          );
+        }
+      });
     }
-
-    _loadPets();
   }
-
+    
   @override
   void dispose() {
     _scrollController.dispose();
@@ -76,49 +59,7 @@ class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin, Addr
     super.dispose();
   }
 
-  Future<void> _initializePageData() async {
-    await _loadAdoptedPets();
-    await _loadPets();
-  }
-
-  Future<void> _loadAdoptedPets() async {
-    try {
-      final submissions = await _persistence.loadSubmissions();
-      
-      setState(() {
-        _adoptedPetIds = submissions
-            .map((s) => s['petId']?.toString() ?? '')
-            .where((id) => id.isNotEmpty)
-            .toList();
-      });
-      
-      if (_pets.isNotEmpty) {
-        setState(() {
-          _filteredPets = _applyFilters(_pets);
-        });
-      }
-    } catch (e) {
-      debugPrint("Error loading adopted pets: $e");
-    }
-  }
-
-  Future<void> _loadPets() async {
-    setState(() => _isLoading = true);
-    final loadedPets = await _apiService.fetchPets(page: 1, pageSize: 100);
-    if (!mounted) return;
-
-    setState(() {
-      _pets = loadedPets;
-      _filteredPets = _applyFilters(loadedPets);
-      _isLoading = false;
-    });
-  }
-
-  void _refreshAndScroll() {
-    setState(() {
-      _filteredPets = _applyFilters(_pets);
-    });
-
+  void _scrollToTop() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
@@ -130,94 +71,6 @@ class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin, Addr
     });
   }
 
-
-
-
-  List<PetItem> _applyFilters(List<PetItem> source) {
-    final normalizedQuery = _searchText.trim().toLowerCase();
-    
-    final user = AuthService.instance.currentUser;
-    final favoriteIds = user != null 
-        ? UserProfile.parsePreferenceSelections(user.favorites) 
-        : <String>[];
-
-    return source.where((pet) {
-      final isAdopted = _adoptedPetIds.contains(pet.id);
-      
-      if (isAdopted) return false;
-
-      final matchesSearch = normalizedQuery.isEmpty ||
-          [
-            pet.name,
-            pet.breed,
-            pet.description,
-            pet.location,
-            UserProfile.labelForPreference(pet.type),
-          ].join(' ').toLowerCase().contains(normalizedQuery);
-      
-      final matchesFilter = _selectedFilters.isEmpty || _selectedFilters.contains(pet.type);
-
-      bool matchesLocation = true;
-      if (selectedState != null && selectedCity != null) {
-        final expectedLocation = "$selectedCity, $selectedState".toLowerCase();
-        matchesLocation = pet.location.toLowerCase() == expectedLocation;
-      } else if (selectedState != null) {
-        matchesLocation = pet.location.toLowerCase().endsWith(selectedState!.toLowerCase());
-      }
-      
-      final matchesFavorite = !_showOnlyFavorites || favoriteIds.contains(pet.id);
-
-      return matchesSearch && matchesFilter && matchesLocation && matchesFavorite;
-    }).toList();
-  }
-
-  void _onSearchChanged(String value) {
-    setState(() => _searchText = value);
-    _refreshAndScroll();
-  }
-
-  void _toggleFilter(String type) {
-    setState(() {
-      if (_selectedFilters.contains(type)) {
-        _selectedFilters.remove(type);
-      } else {
-        _selectedFilters.add(type);
-      }
-    });
-    _refreshAndScroll();
-  }
-
-  Future<void> _toggleFavorite(PetItem pet) async {
-    final user = AuthService.instance.currentUser;
-    
-    if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Faça login para curtir pets!')),
-      );
-      return;
-    }
-
-    List<String> favs = UserProfile.parsePreferenceSelections(user.favorites);
-    
-    if (favs.contains(pet.id)) {
-      favs.remove(pet.id);
-    } else {
-      favs.add(pet.id);
-    }
-
-    await AuthService.instance.updateProfile(
-      name: user.name,
-      preferences: user.preferences,
-      favorites: UserProfile.serializePreferenceSelections(favs),
-    );
-    
-    setState(() {
-      if (_showOnlyFavorites) {
-        _filteredPets = _applyFilters(_pets);
-      }
-    });
-  }
-
   void _openAdoptionForm(PetItem pet) async {
     await Navigator.push(
       context,
@@ -225,12 +78,16 @@ class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin, Addr
         builder: (context) => AdoptionFormPage(selectedPet: pet),
       ),
     );
-    await _loadAdoptedPets();
+    if (mounted) {
+      context.read<PetsProvider>().refreshAdoptedPets();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final provider = context.watch<PetsProvider>();
     final currentUser = AuthService.instance.currentUser;
+    
     final List<String> favoriteIds = currentUser != null 
         ? UserProfile.parsePreferenceSelections(currentUser.favorites) 
         : [];
@@ -240,7 +97,7 @@ class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin, Addr
         title: const Text('Pets para adoção'),
       ),
       body: RefreshIndicator(
-        onRefresh: _loadPets,
+        onRefresh: () => context.read<PetsProvider>().initializeData(),
         child: CustomScrollView(
           controller: _scrollController,
           slivers: [
@@ -255,7 +112,10 @@ class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin, Addr
                         Expanded(
                           child: TextField(
                             controller: _searchController,
-                            onChanged: _onSearchChanged,
+                            onChanged: (value) {
+                              provider.updateSearchText(value);
+                              _scrollToTop();
+                            },
                             decoration: const InputDecoration(
                               hintText: 'Buscar por nome ou raça',
                               prefixIcon: Icon(Icons.search),
@@ -272,10 +132,8 @@ class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin, Addr
                               );
                               return;
                             }
-                            setState(() {
-                              _showOnlyFavorites = !_showOnlyFavorites;
-                            });
-                            _refreshAndScroll();
+                            provider.toggleShowOnlyFavorites();
+                            _scrollToTop();
                           },
                           
                           child: Container(
@@ -289,8 +147,8 @@ class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin, Addr
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(
-                                  _showOnlyFavorites ? Icons.favorite : Icons.favorite_border,
-                                  color: _showOnlyFavorites ? Colors.red : Colors.grey,
+                                  provider.showOnlyFavorites ? Icons.favorite : Icons.favorite_border,
+                                  color: provider.showOnlyFavorites ? Colors.red : Colors.grey,
                                   size: 24,
                                 ),
                                 const Text(
@@ -323,14 +181,14 @@ class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin, Addr
                               setState(() {
                                 selectedState = val;
                                 selectedCity = null;
-                                _filteredPets = _applyFilters(_pets);
                                 if (val != null) {
                                   fetchCities(val);
                                 } else {
                                   cities = [];
                                 }
                               });
-                              _refreshAndScroll();
+                              provider.updateLocation(state: val, city: null);
+                              _scrollToTop();
                             },
                           ),
                         ),
@@ -349,7 +207,8 @@ class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin, Addr
                               setState(() {
                                 selectedCity = val;
                               });
-                              _refreshAndScroll();
+                              provider.updateLocation(state: selectedState, city: val);
+                              _scrollToTop();
                             },
                           ),
                         ),
@@ -369,11 +228,14 @@ class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin, Addr
                       spacing: 8,
                       runSpacing: 8,
                       children: UserProfile.petPreferenceOptions.map((type) {
-                        final isSelected = _selectedFilters.contains(type);
+                        final isSelected = provider.selectedFilters.contains(type);
                         return FilterChip(
                           label: Text(UserProfile.labelForPreference(type)),
                           selected: isSelected,
-                          onSelected: (_) => _toggleFilter(type),
+                          onSelected: (_) {
+                            provider.toggleFilter(type);
+                            _scrollToTop();
+                          },
                         );
                       }).toList(),
                     ),
@@ -382,11 +244,11 @@ class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin, Addr
               ),
             ),
             
-            if (_isLoading)
+            if (provider.isLoading)
               const SliverFillRemaining(
                 child: Center(child: CircularProgressIndicator()),
               )
-            else if (_filteredPets.isEmpty)
+            else if (provider.filteredPets.isEmpty)
               SliverFillRemaining(
                 hasScrollBody: false,
                 child: Center(
@@ -398,7 +260,7 @@ class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin, Addr
                         const Icon(Icons.sentiment_very_dissatisfied, size: 64, color: Color(0xFF8E4C32)),
                         const SizedBox(height: 16),
                         Text(
-                          _showOnlyFavorites 
+                          provider.showOnlyFavorites 
                             ? 'Você ainda não possui pets favoritados com esses filtros!'
                             : 'Nenhum pet encontrado! Por favor, ajuste seus filtros e tente novamente.',
                           textAlign: TextAlign.center,
@@ -415,7 +277,7 @@ class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin, Addr
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate( 
                     (context, index) {
-                      final pet = _filteredPets[index];
+                      final pet = provider.filteredPets[index];
                       return InkWell(
                         onTap: () => Navigator.push(
                           context, 
@@ -424,14 +286,22 @@ class _ProductsPageState extends State<ProductsPage> with SetupDialogMixin, Addr
                         child: PetCard(
                           pet: pet,
                           isFavorite: favoriteIds.contains(pet.id),
-                          onFavoritePressed: () => _toggleFavorite(pet),
-                          onAdoptPressed: _adoptedPetIds.contains(pet.id)
+                          onFavoritePressed: () {
+                            if (currentUser == null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Faça login para curtir pets!')),
+                              );
+                              return;
+                            }
+                            provider.toggleFavorite(pet);
+                          },
+                          onAdoptPressed: provider.adoptedPetIds.contains(pet.id)
                               ? null
                               : () => _openAdoptionForm(pet),
                         ),
                       );
                     },
-                    childCount: _filteredPets.length,
+                    childCount: provider.filteredPets.length,
                   ),
                 ),
               ),

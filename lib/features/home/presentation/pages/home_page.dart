@@ -1,9 +1,9 @@
-import 'package:adopet/features/products/presentation/pages/pet_details_page.dart';
+import 'package:adopet/features/pets/presentation/pages/pet_details_page.dart';
 import 'package:flutter/material.dart';
-import '../../../products/presentation/pages/products_page.dart';
+import '../../../pets/presentation/pages/pets_page.dart';
 import '../../../../core/mixins/setup_dialogue_mixin.dart';
 import '../../../../core/services/persistence_service.dart';
-import '../../../products/data/pet_service.dart';
+import '../../../pets/data/pet_service.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -94,7 +94,7 @@ class _HomePageState extends State<HomePage> with SetupDialogMixin {
                       onPressed: () {
                         Navigator.of(context).push(
                           MaterialPageRoute<void>(
-                            builder: (context) => const ProductsPage(),
+                            builder: (context) => const PetsPage(),
                           ),
                         );
                       },

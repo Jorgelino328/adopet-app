@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../../../core/services/persistence_service.dart';
-import '../../../products/data/pet_service.dart';
+import '../../../pets/data/pet_service.dart';
 
 class AdoptionFormPage extends StatefulWidget {
   const AdoptionFormPage({super.key, this.selectedPet});
