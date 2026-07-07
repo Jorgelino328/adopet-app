@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../../../core/services/persistence_service.dart';
-import '../../../products/data/pet_service.dart';
+import '../../../pets/data/pet_service.dart';
+import '../../models/adoption_submission.dart';
+import '../../../pets/models/pet_item.dart';
 
 class AdoptionFormPage extends StatefulWidget {
   const AdoptionFormPage({super.key, this.selectedPet});
@@ -37,7 +39,8 @@ class _AdoptionFormPageState extends State<AdoptionFormPage> {
     if (widget.selectedPet == null) return;
 
     final existingSubmissions = await _persistence.loadSubmissions();
-    final alreadyAdopted = existingSubmissions.any((s) => s['petId'] == widget.selectedPet!.id);
+    // Using object notation .petId instead of ['petId']
+    final alreadyAdopted = existingSubmissions.any((s) => s.petId == widget.selectedPet!.id);
 
     if (alreadyAdopted) {
       if (!mounted) return;
@@ -46,9 +49,10 @@ class _AdoptionFormPageState extends State<AdoptionFormPage> {
       );
       return;
     }
-    if (currentUser.dob == null || currentUser.contactNumber == null) {
+    
+    if (currentUser.dob == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Complete seu perfil (data de nascimento e telefone) para adotar.')),
+        const SnackBar(content: Text('Complete seu perfil e informe pelo menos sua data de nascimento para adotar.')),
       );
       return;
     }
@@ -60,15 +64,16 @@ class _AdoptionFormPageState extends State<AdoptionFormPage> {
       return;
     }
 
-    final submission = {
-      'name': currentUser.name,
-      'email': currentUser.email,
-      'dob': currentUser.dob,
-      'contactNumber': currentUser.contactNumber,
-      'petId': widget.selectedPet!.id,
-      'note': _noteController.text.trim(),
-      'timestamp': DateTime.now().toIso8601String(),
-    };
+    // Using the strongly typed AdoptionSubmission object
+    final submission = AdoptionSubmission(
+      name: currentUser.name,
+      email: currentUser.email,
+      dob: currentUser.dob!,
+      contactNumber: currentUser.contactNumber!,
+      petId: widget.selectedPet!.id,
+      note: _noteController.text.trim(),
+      timestamp: DateTime.now(),
+    );
 
     await _persistence.saveSubmission(submission);
 
@@ -81,6 +86,7 @@ class _AdoptionFormPageState extends State<AdoptionFormPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Restored your original UI
     final petName = widget.selectedPet?.name ?? 'Pet não selecionado';
     
     return Scaffold(
@@ -92,10 +98,10 @@ class _AdoptionFormPageState extends State<AdoptionFormPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-                Text('Quase lá!', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                Text('Você está solicitando a adoção de: '),
-                const SizedBox(height: 20),
+              Text('Quase lá!', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              const Text('Você está solicitando a adoção de: '),
+              const SizedBox(height: 20),
               
               Container(
                 padding: const EdgeInsets.all(12),

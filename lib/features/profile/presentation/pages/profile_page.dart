@@ -2,6 +2,7 @@ import 'package:adopet/core/mixins/address_mixin.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/services/auth_service.dart';
+import '../../../profile/models/user_profile.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key, this.onSignedOut});
@@ -360,7 +361,7 @@ class _ProfilePageState extends State<ProfilePage> with AddressMixin{
                     TextField(
                       controller: _dobController,
                       readOnly: true,
-                      decoration: const InputDecoration(labelText: 'Data de Nascimento (opcional)', suffixIcon: Icon(Icons.calendar_today)),
+                      decoration: const InputDecoration(labelText: 'Data de Nascimento', suffixIcon: Icon(Icons.calendar_today)),
                       onTap: _pickDate,
                     ),
                     const SizedBox(height: 12),

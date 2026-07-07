@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../data/pet_service.dart';
+import '../../models/pet_item.dart';
 
 class PetDetailsPage extends StatelessWidget {
   const PetDetailsPage({
@@ -28,6 +28,14 @@ class PetDetailsPage extends StatelessWidget {
               height: 250,
               width: double.infinity,
               fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  height: 250,
+                  width: double.infinity,
+                  color: Colors.grey[300],
+                  child: const Icon(Icons.broken_image, size: 50, color: Colors.grey),
+                );
+              },
             ),
             
             Transform.translate(
@@ -48,7 +56,8 @@ class PetDetailsPage extends StatelessWidget {
                         pet.name,
                         style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                               fontWeight: FontWeight.w900,
-                              color: const Color(0xFFC64600),
+                              // Using theme colors instead of hardcoded hex!
+                              color: Theme.of(context).colorScheme.primary, 
                             ),
                       ),
                       const SizedBox(height: 8),

@@ -1,9 +1,11 @@
-import 'package:adopet/features/products/presentation/pages/pet_details_page.dart';
+import 'package:adopet/features/pets/presentation/pages/pet_details_page.dart';
 import 'package:flutter/material.dart';
-import '../../../products/presentation/pages/products_page.dart';
+import '../../../pets/presentation/pages/pets_page.dart';
 import '../../../../core/mixins/setup_dialogue_mixin.dart';
 import '../../../../core/services/persistence_service.dart';
-import '../../../products/data/pet_service.dart';
+import '../../../pets/data/pet_service.dart';
+import '../../../pets/models/pet_item.dart';
+import '../../../adoption/models/adoption_submission.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -13,7 +15,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> with SetupDialogMixin {
-  List<Map<String, dynamic>> _submissions = [];
+  List<AdoptionSubmission> _submissions = [];
   List<PetItem> _allPets = []; 
   final PetApiService _api = PetApiService();
   final PersistenceService _persistence = PersistenceService();
@@ -94,7 +96,7 @@ class _HomePageState extends State<HomePage> with SetupDialogMixin {
                       onPressed: () {
                         Navigator.of(context).push(
                           MaterialPageRoute<void>(
-                            builder: (context) => const ProductsPage(),
+                            builder: (context) => const PetsPage(),
                           ),
                         );
                       },
@@ -138,8 +140,8 @@ class _HomePageState extends State<HomePage> with SetupDialogMixin {
                   separatorBuilder: (_, _) => const SizedBox(height: 8),
                   itemBuilder: (context, index) {
                     final submission = _submissions[_submissions.length - 1 - index];
-                    final name = submission['name'] as String? ?? 'Cliente';
-                    final petId = submission['petId'] as String?;
+                    final name = submission.name; 
+                    final petId = submission.petId;
                     
                     final pet = _allPets.firstWhere(
                       (p) => p.id == petId,
@@ -149,7 +151,6 @@ class _HomePageState extends State<HomePage> with SetupDialogMixin {
                         health: '', location: ''
                       ),
                     );
-
                     return Card(
                       child: ListTile(
                         leading: CircleAvatar(

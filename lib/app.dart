@@ -1,37 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'core/services/auth_service.dart';
 import 'core/theme/app_theme.dart';
 import 'features/home/presentation/pages/home_page.dart';
-import 'features/products/presentation/pages/products_page.dart';
+import 'features/pets/presentation/pages/pets_page.dart';
 import 'features/profile/presentation/pages/profile_page.dart';
 
-class AdopetApp extends StatefulWidget {
+class AdopetApp extends StatelessWidget {
   const AdopetApp({super.key});
-
-  @override
-  State<AdopetApp> createState() => _AdopetAppState();
-}
-
-class _AdopetAppState extends State<AdopetApp> {
-  final _authService = AuthService.instance;
-  bool _isReady = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _initialize();
-  }
-
-  Future<void> _initialize() async {
-    await _authService.initialize();
-    if (!mounted) {
-      return;
-    }
-    setState(() {
-      _isReady = true;
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -47,9 +22,7 @@ class _AdopetAppState extends State<AdopetApp> {
       supportedLocales: const [
         Locale('pt', 'BR'),
       ],
-      home: _isReady
-          ? const AdopetShell()
-          : const Scaffold(body: Center(child: CircularProgressIndicator())),
+      home: const AdopetShell(),
     );
   }
 }
@@ -65,7 +38,7 @@ class _AdopetShellState extends State<AdopetShell> {
   int _currentIndex = 0;
   final List<Widget> _pages = const [
     HomePage(),
-    ProductsPage(),
+    PetsPage(),
     ProfilePage(),
   ];
 
