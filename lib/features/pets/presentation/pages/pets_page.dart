@@ -170,10 +170,14 @@ class _PetsPageState extends State<PetsPage> with SetupDialogMixin, AddressMixin
                         SizedBox(
                           width: 90,
                           child: DropdownButtonFormField<String>(
-                            key: Key('state_${states.length}_$selectedState'),
+                            value: states.any((s) => s['sigla'] == selectedState) ? selectedState : null, 
                             isExpanded: true,
-                            decoration: const InputDecoration(labelText: 'UF', border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14)),
-                            hint: Text(selectedState ?? '--'),
+                            decoration: const InputDecoration(
+                                labelText: 'UF', 
+                                border: OutlineInputBorder(), 
+                                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14)
+                            ),
+                            hint: const Text('--'),
                             items: [
                               const DropdownMenuItem<String>(value: null, child: Text('--')),
                               ...states.map((s) => s['sigla'] as String).toSet().map((sigla) => DropdownMenuItem(value: sigla, child: Text(sigla))),
@@ -181,13 +185,9 @@ class _PetsPageState extends State<PetsPage> with SetupDialogMixin, AddressMixin
                             onChanged: (val) {
                               setState(() {
                                 selectedState = val;
-                                selectedCity = null;
-                                if (val != null) {
-                                  fetchCities(val);
-                                } else {
-                                  cities = [];
-                                }
+                                selectedCity = null; 
                               });
+                              if (val != null) fetchCities(val);
                               provider.updateLocation(state: val, city: null);
                               _scrollToTop();
                             },
@@ -196,18 +196,20 @@ class _PetsPageState extends State<PetsPage> with SetupDialogMixin, AddressMixin
                         const SizedBox(width: 8),
                         Expanded(
                           child: DropdownButtonFormField<String>(
-                            key: Key('city_${cities.length}_$selectedCity'),
+                            value: cities.any((c) => c['nome'] == selectedCity) ? selectedCity : null,
                             isExpanded: true,
-                            decoration: const InputDecoration(labelText: 'Cidade', border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14)),
-                            hint: Text(selectedCity ?? '---'),
+                            decoration: const InputDecoration(
+                                labelText: 'Cidade', 
+                                border: OutlineInputBorder(), 
+                                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14)
+                            ),
+                            hint: const Text('---'),
                             items: [
                               const DropdownMenuItem<String>(value: null, child: Text('---')),
                               ...cities.map((c) => c['nome'] as String).toSet().map((nome) => DropdownMenuItem(value: nome, child: Text(nome))),
                             ],
                             onChanged: (val) {
-                              setState(() {
-                                selectedCity = val;
-                              });
+                              setState(() => selectedCity = val);
                               provider.updateLocation(state: selectedState, city: val);
                               _scrollToTop();
                             },
@@ -281,8 +283,14 @@ class _PetsPageState extends State<PetsPage> with SetupDialogMixin, AddressMixin
                       final pet = provider.filteredPets[index];
                       return InkWell(
                         onTap: () => Navigator.push(
-                          context, 
-                          MaterialPageRoute(builder: (_) => PetDetailsPage(pet: pet))
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => PetDetailsPage(
+                              pet: pet,
+                              isAdopted: provider.adoptedPetIds.contains(pet.id),
+                              onAdoptPressed: () => _openAdoptionForm(pet),
+                            ),
+                          ),
                         ),
                         child: PetCard(
                           pet: pet,

@@ -361,7 +361,7 @@ class _ProfilePageState extends State<ProfilePage> with AddressMixin{
                     TextField(
                       controller: _dobController,
                       readOnly: true,
-                      decoration: const InputDecoration(labelText: 'Data de Nascimento (opcional)', suffixIcon: Icon(Icons.calendar_today)),
+                      decoration: const InputDecoration(labelText: 'Data de Nascimento', suffixIcon: Icon(Icons.calendar_today)),
                       onTap: _pickDate,
                     ),
                     const SizedBox(height: 12),

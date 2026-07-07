@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../../../core/mixins/address_mixin.dart'; 
-import '../../../profile/models/user_profile.dart';
+import '../../models/user_profile.dart';
 
 class SetupProfilePage extends StatefulWidget {
   const SetupProfilePage({super.key});
@@ -106,7 +106,7 @@ class _SetupProfilePageState extends State<SetupProfilePage> with AddressMixin {
             controller: _dobController,
             readOnly: true,
             decoration: const InputDecoration(
-              labelText: 'Data de Nascimento (opcional)', 
+              labelText: 'Data de Nascimento (opcional)', // Restored
               suffixIcon: Icon(Icons.calendar_today)
             ),
             onTap: _pickDate,
